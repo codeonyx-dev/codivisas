@@ -1,6 +1,15 @@
 # Publicar una nueva versión de SpreadVE
 
-## 1. Subir version en Gradle
+## Firma (producción)
+
+Release se firma con el keystore local (no está en Git):
+
+- `keystore/spreadve-release.jks` — clave privada
+- `keystore.properties` — contraseñas (ver `keystore.properties.example`)
+
+**Haz backup de ambos en un lugar seguro.** Si los pierdes, no podrás actualizar la app sobre instalaciones existentes.
+
+## 1. Subir versión en Gradle
 
 En `app/build.gradle.kts`:
 
@@ -30,7 +39,9 @@ git commit -m "Release v1.2.0"
 git push origin main
 ```
 
-## 4. Compilar APK
+No incluyas `keystore/` ni `keystore.properties`.
+
+## 4. Compilar APK firmado
 
 ```bash
 ./gradlew assembleRelease
@@ -46,5 +57,6 @@ gh release create v1.2.0 app/build/outputs/apk/release/app-release.apk#SpreadVE.
 
 ## Notas
 
-- Los usuarios deben instalar siempre APKs firmados con la **misma clave**. Hoy release usa la firma debug del proyecto (desarrollo). Para producción, configura un keystore propio.
+- Los usuarios deben instalar siempre APKs firmados con la **misma clave**.
+- Si alguien tiene instalada una build firmada con debug, debe **desinstalar** antes de instalar la firmada con el keystore de producción.
 - Tras publicar, espera ~1 minuto a que `update.json` en GitHub esté actualizado antes de probar la notificación.
