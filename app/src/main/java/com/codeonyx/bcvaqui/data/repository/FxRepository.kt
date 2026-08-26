@@ -17,6 +17,8 @@ class FxRepository(
     private val preferencesRepository: PreferencesRepository
 ) {
     val preferences = preferencesRepository.preferences
+    private var historyCache: List<BcvRateResponse> = emptyList()
+    private var historyCacheAtMs: Long = 0L
 
     suspend fun refreshDashboard(forceNetwork: Boolean = true): Result<FxDashboard> {
         val prefs = preferences.first()
@@ -30,11 +32,16 @@ class FxRepository(
             coroutineScope {
                 val bcvDeferred = async { fetchBcvRatesWithRetry() }
                 val worldDeferred = async { fetchWorldRatesSafe() }
-                val binanceDeferred = async { fetchBinanceUsdtVes() }
+                val binanceDeferred = if (prefs.showBinanceRate) {
+                    async { fetchBinanceUsdtVes() }
+                } else {
+                    null
+                }
 
                 val bcvResult = bcvDeferred.await()
                 val world = worldDeferred.await()
-                val binance = binanceDeferred.await()
+                val binance = binanceDeferred?.await()
+                    ?: BinanceFetchResult(prefs.lastKnownBinanceUsdtVes, null)
                 val bcvRates = bcvResult.rates
                 val bcvUpdatedAt = bcvResult.updatedAt
 
@@ -68,7 +75,16 @@ class FxRepository(
     /** Últimos [days] días del histórico BCV (más reciente al final). */
     suspend fun fetchHistory(days: Int = 30): Result<List<BcvRateResponse>> {
         return runCatching {
-            val all = NetworkModule.bcvTodayApi.getHistory()
+            val cacheIsFresh = historyCache.isNotEmpty() &&
+                System.currentTimeMillis() - historyCacheAtMs < HISTORY_CACHE_TTL_MS
+            val all = if (cacheIsFresh) {
+                historyCache
+            } else {
+                NetworkModule.bcvTodayApi.getHistory().also {
+                    historyCache = it
+                    historyCacheAtMs = System.currentTimeMillis()
+                }
+            }
             all.takeLast(days.coerceIn(7, 365))
         }
     }
@@ -176,4 +192,8 @@ class FxRepository(
         val rate: Double?,
         val error: String?
     )
+
+    private companion object {
+        const val HISTORY_CACHE_TTL_MS = 15 * 60 * 1000L
+    }
 }

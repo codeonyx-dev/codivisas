@@ -17,22 +17,26 @@ class ShareRateWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+        val pendingResult = goAsync()
+        Widgets.runAsync(pendingResult) {
+            val snapshot = Widgets.loadSnapshot(context)
+            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it, snapshot) }
+        }
     }
 
     companion object {
-        fun updateAllWidgets(context: Context) {
+        fun updateAllWidgets(context: Context, snapshot: WidgetSnapshot) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, ShareRateWidgetProvider::class.java))
-            ids.forEach { updateWidget(context, manager, it) }
+            ids.forEach { updateWidget(context, manager, it, snapshot) }
         }
 
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            snap: WidgetSnapshot
         ) {
-            val snap = Widgets.loadSnapshot(context)
             val views = RemoteViews(context.packageName, R.layout.widget_share)
             Widgets.applyBrandAndAlert(views, R.id.widget_share_root, snap)
             views.setTextViewText(

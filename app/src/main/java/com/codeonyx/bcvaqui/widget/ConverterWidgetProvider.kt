@@ -10,7 +10,7 @@ import android.widget.RemoteViews
 import com.codeonyx.bcvaqui.R
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.domain.FxCalculator
-import kotlinx.coroutines.runBlocking
+import com.codeonyx.bcvaqui.domain.RateSources
 
 class ConverterWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -18,32 +18,39 @@ class ConverterWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+        val pendingResult = goAsync()
+        Widgets.runAsync(pendingResult) {
+            val snapshot = Widgets.loadSnapshot(context)
+            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it, snapshot) }
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_CYCLE_AMOUNT) {
-            runBlocking { PreferencesRepository(context).cycleWidgetConvertAmount() }
-            updateAllWidgets(context)
+            val pendingResult = goAsync()
+            Widgets.runAsync(pendingResult) {
+                PreferencesRepository(context).cycleWidgetConvertAmount()
+                updateAllWidgets(context, Widgets.loadSnapshot(context))
+            }
         }
     }
 
     companion object {
         const val ACTION_CYCLE_AMOUNT = "com.codeonyx.bcvaqui.widget.ACTION_CYCLE_AMOUNT"
 
-        fun updateAllWidgets(context: Context) {
+        fun updateAllWidgets(context: Context, snapshot: WidgetSnapshot) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, ConverterWidgetProvider::class.java))
-            ids.forEach { updateWidget(context, manager, it) }
+            ids.forEach { updateWidget(context, manager, it, snapshot) }
         }
 
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            snap: WidgetSnapshot
         ) {
-            val snap = Widgets.loadSnapshot(context)
             val amount = snap.prefs.widgetConvertAmount
             val rate = snap.rate
             val ves = if (rate != null) FxCalculator.round2(amount * rate) else null
@@ -60,7 +67,9 @@ class ConverterWidgetProvider : AppWidgetProvider() {
             )
             views.setTextViewText(
                 R.id.widget_converter_rate,
-                rate?.let { "Tasa BCV ${FxCalculator.format2(it)}" } ?: "Sin tasa"
+                rate?.let {
+                    "${RateSources.rateSourceLabel(snap.currency)} ${FxCalculator.format2(it)}"
+                } ?: "Sin tasa"
             )
             views.setOnClickPendingIntent(
                 R.id.widget_converter_root,

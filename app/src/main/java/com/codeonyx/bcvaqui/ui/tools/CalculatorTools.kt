@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.share.ReceiptData
 import com.codeonyx.bcvaqui.ui.share.ReceiptShareHelper
@@ -255,7 +256,10 @@ fun CompartirToolScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val rates = dashboard?.bcvRates.orEmpty()
-    val currencies = rates.keys.sorted().ifEmpty { listOf("USD") }
+    val currencies = buildList {
+        addAll(rates.keys.sorted().ifEmpty { listOf("USD") })
+        if (preferences.showBinanceRate) add(RateSources.BINANCE_USDT)
+    }.distinct()
     val context = LocalContext.current
 
     var amount by remember { mutableStateOf("1") }
@@ -267,7 +271,11 @@ fun CompartirToolScreen(viewModel: MainViewModel = appViewModel()) {
     var convertToVes by remember { mutableStateOf(true) }
     var selectedPaymentId by remember { mutableStateOf<String?>(null) }
 
-    val rate = rates[currency]?.rateToVes ?: 0.0
+    val rate = RateSources.effectiveRate(
+        currency = currency,
+        bcvRates = rates,
+        binanceUsdtVes = dashboard?.binanceUsdtVes ?: preferences.lastKnownBinanceUsdtVes
+    ) ?: 0.0
     val amt = parseToolAmount(amount)
     val result = if (convertToVes) FxCalculator.round2(amt * rate)
     else if (rate > 0) FxCalculator.round2(amt / rate) else 0.0
@@ -330,6 +338,7 @@ fun CompartirToolScreen(viewModel: MainViewModel = appViewModel()) {
                     foreignAmount = foreign,
                     vesAmount = ves,
                     updatedAt = dashboard?.bcvUpdatedAt
+                        .takeUnless { currency == RateSources.BINANCE_USDT }
                 )
                 val payment = contacts.firstOrNull { it.id == selectedPaymentId }
                 ReceiptShareHelper.share(

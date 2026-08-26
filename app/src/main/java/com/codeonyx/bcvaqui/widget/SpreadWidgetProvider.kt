@@ -14,26 +14,30 @@ class SpreadWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+        val pendingResult = goAsync()
+        Widgets.runAsync(pendingResult) {
+            val snapshot = Widgets.loadSnapshot(context)
+            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it, snapshot) }
+        }
     }
 
     companion object {
-        fun updateAllWidgets(context: Context) {
+        fun updateAllWidgets(context: Context, snapshot: WidgetSnapshot) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, SpreadWidgetProvider::class.java))
-            ids.forEach { updateWidget(context, manager, it) }
+            ids.forEach { updateWidget(context, manager, it, snapshot) }
         }
 
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            snap: WidgetSnapshot
         ) {
-            val snap = Widgets.loadSnapshot(context)
             val prefs = snap.prefs
             val bcv = prefs.lastKnownUsdRate
                 ?: snap.rate.takeIf { snap.currency == "USD" }
-            val p2p = prefs.lastKnownBinanceUsdtVes
+            val p2p = prefs.lastKnownBinanceUsdtVes.takeIf { prefs.showBinanceRate }
 
             val spreadPct = if (bcv != null && p2p != null && bcv > 0) {
                 FxCalculator.round2((p2p - bcv) / bcv * 100.0)
@@ -58,6 +62,7 @@ class SpreadWidgetProvider : AppWidgetProvider() {
             )
 
             val footer = when {
+                !prefs.showBinanceRate -> "P2P desactivado en Ajustes"
                 p2p == null -> "P2P no disponible · abre la app para actualizar"
                 spreadPct != null -> "P2P USDT/VES · Binance"
                 else -> "USD · referencia de mercado"

@@ -22,8 +22,12 @@ class RateWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { id ->
-            updateWidget(context, appWidgetManager, id)
+        val pendingResult = goAsync()
+        Widgets.runAsync(pendingResult) {
+            val snapshot = Widgets.loadSnapshot(context)
+            appWidgetIds.forEach { id ->
+                updateWidget(context, appWidgetManager, id, snapshot)
+            }
         }
     }
 
@@ -37,27 +41,26 @@ class RateWidgetProvider : AppWidgetProvider() {
                 .setConstraints(constraints)
                 .build()
             WorkManager.getInstance(context).enqueue(request)
-            Widgets.updateAll(context)
         }
     }
 
     companion object {
         const val ACTION_REFRESH = "com.codeonyx.bcvaqui.widget.ACTION_REFRESH"
 
-        fun updateAllWidgets(context: Context) {
+        fun updateAllWidgets(context: Context, snapshot: WidgetSnapshot) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, RateWidgetProvider::class.java))
             ids.forEach { id ->
-                updateWidget(context, manager, id)
+                updateWidget(context, manager, id, snapshot)
             }
         }
 
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            snap: WidgetSnapshot
         ) {
-            val snap = Widgets.loadSnapshot(context)
             val views = RemoteViews(context.packageName, R.layout.widget_rate)
             Widgets.applyBrandAndAlert(views, R.id.widget_root, snap)
             views.setTextViewText(
