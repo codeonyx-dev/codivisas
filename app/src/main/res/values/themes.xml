@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BcvAqui" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <style name="Theme.BcvAqui.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/bcv_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.BcvAqui</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

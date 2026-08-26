@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BCV Aquí</string>
+    <string name="widget_label">BCV Aquí</string>
+    <string name="widget_description">Tasa BCV grande con tu moneda y botón para actualizar</string>
+    <string name="widget_refresh">Actualizar tasa</string>
+    <string name="channel_rate_changes">Cambios de tasa</string>
+    <string name="notification_rate_up">%1$s subió a %2$s Bs. (era %3$s)</string>
+    <string name="notification_rate_down">%1$s bajó a %2$s Bs. (era %3$s)</string>
+</resources>
