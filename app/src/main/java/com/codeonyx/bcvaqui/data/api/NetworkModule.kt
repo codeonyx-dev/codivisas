@@ -15,21 +15,14 @@ object NetworkModule {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true
+        encodeDefaults = true
     }
 
-    private val okHttpClient: OkHttpClient by lazy {
+    private fun baseClientBuilder(): OkHttpClient.Builder =
         OkHttpClient.Builder()
             .connectTimeout(ApiConfig.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(ApiConfig.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(ApiConfig.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .addInterceptor { chain ->
-                chain.proceed(
-                    chain.request().newBuilder()
-                        .header("User-Agent", "BCV-Aqui/1.0 Android")
-                        .header("Accept", "application/json")
-                        .build()
-                )
-            }
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(
@@ -38,6 +31,37 @@ object NetworkModule {
                         }
                     )
                 }
+            }
+
+    private val okHttpClient: OkHttpClient by lazy {
+        baseClientBuilder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header("User-Agent", "BCV-Aqui/1.0 Android")
+                        .header("Accept", "application/json")
+                        .build()
+                )
+            }
+            .build()
+    }
+
+    /** Binance suele rechazar clientes sin headers de navegador. */
+    private val binanceOkHttpClient: OkHttpClient by lazy {
+        baseClientBuilder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header(
+                            "User-Agent",
+                            "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                        )
+                        .header("Accept", "application/json")
+                        .header("Content-Type", "application/json")
+                        .header("clienttype", "android")
+                        .header("lang", "es")
+                        .build()
+                )
             }
             .build()
     }
@@ -58,5 +82,14 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(OpenErApi::class.java)
+    }
+
+    val binanceP2pApi: BinanceP2pApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(ApiConfig.BINANCE_P2P_URL)
+            .client(binanceOkHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(BinanceP2pApi::class.java)
     }
 }

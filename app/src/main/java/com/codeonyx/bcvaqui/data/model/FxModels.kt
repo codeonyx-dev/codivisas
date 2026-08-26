@@ -39,8 +39,38 @@ data class FxDashboard(
     val bcvUpdatedAt: String?,
     val worldRatesUsd: Map<String, Double> = emptyMap(),
     val worldRatesUpdatedAt: String? = null,
+    /** Mediana aproximada USDT/VES en Binance P2P (compra), si está habilitado. */
+    val binanceUsdtVes: Double? = null,
+    val binanceError: String? = null,
     val isFromCache: Boolean,
     val errorMessage: String? = null
+)
+
+@Serializable
+data class BinanceSearchRequest(
+    val asset: String = "USDT",
+    val fiat: String = "VES",
+    val tradeType: String = "BUY",
+    val page: Int = 1,
+    val rows: Int = 10,
+    val payTypes: List<String> = emptyList()
+)
+
+@Serializable
+data class BinanceP2pResponse(
+    val code: String? = null,
+    val message: String? = null,
+    val data: List<BinanceAdvRow>? = null
+)
+
+@Serializable
+data class BinanceAdvRow(
+    val adv: BinanceAdv? = null
+)
+
+@Serializable
+data class BinanceAdv(
+    val price: String? = null
 )
 
 /** Destinos / monedas disponibles en la pestaña "Dónde". */

@@ -4,18 +4,48 @@
     android:height="288dp"
     android:viewportWidth="288"
     android:viewportHeight="288">
+
+    <!-- Soft gold glow -->
     <path
         android:fillColor="#33FBBF24"
-        android:pathData="M144,12c-72.9,0 -132,59.1 -132,132s59.1,132 132,132 132,-59.1 132,-132 -59.1,-132 -132,-132z" />
+        android:pathData="M144,24c-66.3,0 -120,53.7 -120,120s53.7,120 120,120 120,-53.7 120,-120 -53.7,-120 -120,-120z" />
+
+    <!-- Navy disc -->
     <path
         android:fillColor="#1E3A8A"
-        android:pathData="M144,28c-64.1,0 -116,51.9 -116,116s51.9,116 116,116 116,-51.9 116,-116 -51.9,-116 -116,-116z" />
+        android:pathData="M144,40c-57.4,0 -104,46.6 -104,104s46.6,104 104,104 104,-46.6 104,-104 -46.6,-104 -104,-104z" />
+
+    <!-- Exchange arrows — upper -->
     <path
-        android:fillColor="#00000000"
+        android:pathData="M90.7,154.7 A58.7,58.7 0 0,1 186.7,101.3"
+        android:strokeWidth="16.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="butt"
+        android:fillColor="#00000000" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M186.7,101.3 L165.9,81.3 L202.1,87.5 Z" />
+
+    <!-- Exchange arrows — lower -->
+    <path
+        android:pathData="M197.3,133.3 A58.7,58.7 0 0,1 101.3,186.7"
+        android:strokeWidth="16.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="butt"
+        android:fillColor="#00000000" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M101.3,186.7 L122.1,206.7 L85.9,200.5 Z" />
+
+    <!-- Gold rate spark -->
+    <path
+        android:pathData="M80,192 C106.7,176 122.7,170.7 138.7,149.3 C154.7,128 170.7,106.7 208,80"
+        android:strokeWidth="8.5"
         android:strokeColor="#FBBF24"
-        android:strokeWidth="10"
-        android:pathData="M144,52c-50.8,0 -92,41.2 -92,92s41.2,92 92,92 92,-41.2 92,-92 -41.2,-92 -92,-92z" />
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
     <path
         android:fillColor="#FBBF24"
-        android:pathData="M132,88h24v12c16,2 28,11 28,27 0,12 -7,20 -18,24l1,0.2c14,5 23,14 23,30 0,20 -17,33 -42,35V228h-16v-16c-21,-2 -36,-13 -40,-33h22c3,10 11,16 25,16 13,0 22,-6 22,-16 0,-10 -7,-15 -24,-20l-12,-3v-15l12,-3c15,-4 22,-10 22,-21 0,-10 -8,-16 -21,-16 -12,0 -20,6 -23,16h-21c3,-20 18,-32 43,-34V88z" />
+        android:pathData="M208,80m-9.6,0a9.6,9.6 0,1 1,19.2,0a9.6,9.6 0,1 1,-19.2,0" />
 </vector>

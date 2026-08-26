@@ -6,8 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,17 +17,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.share.ReceiptData
 import com.codeonyx.bcvaqui.ui.share.ReceiptShareHelper
+import com.codeonyx.bcvaqui.ui.theme.BcvBlue
+import com.codeonyx.bcvaqui.ui.theme.RateDown
+import com.codeonyx.bcvaqui.ui.theme.RateUp
 
 @Composable
-fun AlcanzaScreen(viewModel: MainViewModel = viewModel()) {
+fun AlcanzaScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val rates = dashboard?.bcvRates.orEmpty()
     val currencies = rates.keys.sorted().ifEmpty { listOf("USD") }
@@ -38,31 +43,35 @@ fun AlcanzaScreen(viewModel: MainViewModel = viewModel()) {
     val foreign = if (rate > 0) FxCalculator.round2(bs / rate) else 0.0
 
     ToolScaffold {
-        Text(
-            text = "Tienes bolívares y quieres saber a cuánto equivalen.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        ToolNumberField(amountBs, { amountBs = it }, "Monto en bolívares", "Bs.")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("100", "500", "1000", "5000", "10000").forEach { chip ->
-                FilterChip(
-                    selected = amountBs == chip,
-                    onClick = { amountBs = chip },
-                    label = { Text(chip) }
-                )
+        ToolIntro("Tienes bolívares y quieres saber a cuánto equivalen.")
+        ToolPanel {
+            ToolNumberField(amountBs, { amountBs = it }, "Monto en bolívares", "Bs.")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("100", "500", "1000", "5000", "10000").forEach { chip ->
+                    FilterChip(
+                        selected = amountBs == chip,
+                        onClick = { amountBs = chip },
+                        label = { Text(chip) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
+                            selectedLabelColor = BcvBlue
+                        )
+                    )
+                }
             }
+            Text("Convertir a", fontWeight = FontWeight.SemiBold)
+            CurrencyChips(currencies, currency) { currency = it }
         }
-        CurrencyChips(currencies, currency) { currency = it }
         ToolResultCard(
             title = "Te alcanzan",
             value = "${FxCalculator.formatAmount(foreign)} ${FxCalculator.currencySymbol(currency)}",
-            detail = "a tasa BCV ${FxCalculator.format2(rate)} Bs./$currency"
+            detail = "a tasa BCV ${FxCalculator.format2(rate)} Bs./$currency",
+            accent = Color(0xFF059669)
         )
     }
 }
@@ -80,34 +89,33 @@ fun ComisionScreen() {
     val totalPaid = if (feeOnSender) base else FxCalculator.round2(base + fee)
 
     ToolScaffold {
-        Text(
-            text = "Calcula el neto y el costo de una comisión o remesa.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        ToolNumberField(amount, { amount = it }, "Monto", "$")
-        ToolNumberField(feePct, { feePct = it }, "Comisión", "%")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = feeOnSender,
-                onClick = { feeOnSender = true },
-                label = { Text("Se descuenta del monto") }
-            )
-            FilterChip(
-                selected = !feeOnSender,
-                onClick = { feeOnSender = false },
-                label = { Text("Se suma al pagar") }
-            )
+        ToolIntro("Calcula el neto y el costo de una comisión o remesa.")
+        ToolPanel {
+            ToolNumberField(amount, { amount = it }, "Monto", "$")
+            ToolNumberField(feePct, { feePct = it }, "Comisión", "%")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = feeOnSender,
+                    onClick = { feeOnSender = true },
+                    label = { Text("Se descuenta del monto") }
+                )
+                FilterChip(
+                    selected = !feeOnSender,
+                    onClick = { feeOnSender = false },
+                    label = { Text("Se suma al pagar") }
+                )
+            }
         }
-        ToolResultCard("Comisión", FxCalculator.format2(fee))
+        ToolResultCard("Comisión", FxCalculator.format2(fee), accent = Color(0xFFD97706))
         ToolResultCard(
             title = if (feeOnSender) "Recibe neto" else "Monto a enviar",
-            value = FxCalculator.format2(net)
+            value = FxCalculator.format2(net),
+            accent = RateUp
         )
         ToolResultCard(
             title = "Total que pagas",
@@ -118,7 +126,7 @@ fun ComisionScreen() {
 }
 
 @Composable
-fun VariacionScreen(viewModel: MainViewModel = viewModel()) {
+fun VariacionScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val current = dashboard?.bcvRates?.get("USD")?.rateToVes ?: 0.0
 
@@ -133,36 +141,39 @@ fun VariacionScreen(viewModel: MainViewModel = viewModel()) {
     val b = parseToolAmount(toRate)
     val diff = FxCalculator.round2(b - a)
     val pct = if (a > 0) FxCalculator.round2((b - a) / a * 100.0) else 0.0
-    val sign = if (pct >= 0) "+" else ""
 
     ToolScaffold {
-        Text(
-            text = "Compara dos tasas (ej. ayer vs hoy).",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        ToolNumberField(fromRate, { fromRate = it }, "Tasa anterior", "Bs.")
-        ToolNumberField(toRate, { toRate = it }, "Tasa nueva", "Bs.")
-        if (current > 0) {
-            FilterChip(
-                selected = false,
-                onClick = {
-                    fromRate = toRate
-                    toRate = FxCalculator.format2(current)
-                },
-                label = { Text("Usar tasa BCV actual (${FxCalculator.format2(current)})") }
-            )
+        ToolIntro("Compara dos tasas (ej. ayer vs hoy).")
+        ToolPanel {
+            ToolNumberField(fromRate, { fromRate = it }, "Tasa anterior", "Bs.")
+            ToolNumberField(toRate, { toRate = it }, "Tasa nueva", "Bs.")
+            if (current > 0) {
+                FilterChip(
+                    selected = false,
+                    onClick = {
+                        fromRate = toRate
+                        toRate = FxCalculator.format2(current)
+                    },
+                    label = { Text("Usar tasa BCV actual (${FxCalculator.format2(current)})") }
+                )
+            }
         }
         ToolResultCard(
             title = "Variación",
-            value = "$sign${FxCalculator.format2(pct)}%",
-            detail = "Diferencia: $sign${FxCalculator.format2(diff)} Bs."
+            value = "${FxCalculator.format2(diff)} Bs.",
+            detail = "Diferencia entre ambas tasas",
+            accent = when {
+                pct > 0.005 -> RateUp
+                pct < -0.005 -> RateDown
+                else -> BcvBlue
+            },
+            changePercent = pct
         )
     }
 }
 
 @Composable
-fun MetaScreen(viewModel: MainViewModel = viewModel()) {
+fun MetaScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val rates = dashboard?.bcvRates.orEmpty()
     val currencies = rates.keys.sorted().ifEmpty { listOf("USD") }
@@ -178,24 +189,24 @@ fun MetaScreen(viewModel: MainViewModel = viewModel()) {
     val progress = if (goal > 0) ((owned / goal) * 100.0).coerceIn(0.0, 100.0) else 0.0
 
     ToolScaffold {
-        Text(
-            text = "Define una meta en moneda extranjera y calcula cuántos Bs. faltan.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        CurrencyChips(currencies, currency) { currency = it }
-        ToolNumberField(target, { target = it }, "Meta", FxCalculator.currencySymbol(currency))
-        ToolNumberField(have, { have = it }, "Ya tienes", FxCalculator.currencySymbol(currency))
+        ToolIntro("Define una meta en moneda extranjera y calcula cuántos Bs. faltan.")
+        ToolPanel {
+            Text("Moneda de la meta", fontWeight = FontWeight.SemiBold)
+            CurrencyChips(currencies, currency) { currency = it }
+            ToolNumberField(target, { target = it }, "Meta", FxCalculator.currencySymbol(currency))
+            ToolNumberField(have, { have = it }, "Ya tienes", FxCalculator.currencySymbol(currency))
+        }
         ToolResultCard(
             title = "Te faltan",
             value = "${FxCalculator.formatAmount(remaining)} ${FxCalculator.currencySymbol(currency)}",
-            detail = "≈ ${FxCalculator.formatAmount(neededBs)} Bs. · avance ${FxCalculator.format2(progress)}%"
+            detail = "≈ ${FxCalculator.formatAmount(neededBs)} Bs. · avance ${FxCalculator.format2(progress)}%",
+            accent = Color(0xFF0891B2)
         )
     }
 }
 
 @Composable
-fun DividirScreen(viewModel: MainViewModel = viewModel()) {
+fun DividirScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val usdRate = dashboard?.bcvRates?.get("USD")?.rateToVes ?: 0.0
 
@@ -213,17 +224,15 @@ fun DividirScreen(viewModel: MainViewModel = viewModel()) {
     }
 
     ToolScaffold {
-        Text(
-            text = "Reparte un total entre varias personas.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = inVes, onClick = { inVes = true }, label = { Text("En Bs.") })
-            FilterChip(selected = !inVes, onClick = { inVes = false }, label = { Text("En USD") })
+        ToolIntro("Reparte un total entre varias personas.")
+        ToolPanel {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = inVes, onClick = { inVes = true }, label = { Text("En Bs.") })
+                FilterChip(selected = !inVes, onClick = { inVes = false }, label = { Text("En USD") })
+            }
+            ToolNumberField(total, { total = it }, "Total", if (inVes) "Bs." else "$")
+            ToolNumberField(people, { people = it.filter { c -> c.isDigit() } }, "Personas")
         }
-        ToolNumberField(total, { total = it }, "Total", if (inVes) "Bs." else "$")
-        ToolNumberField(people, { people = it.filter { c -> c.isDigit() } }, "Personas")
         ToolResultCard(
             title = "Cada uno paga",
             value = if (inVes) {
@@ -235,13 +244,14 @@ fun DividirScreen(viewModel: MainViewModel = viewModel()) {
                 "≈ ${FxCalculator.formatAmount(eachOther)} USD"
             } else {
                 "≈ ${FxCalculator.formatAmount(eachOther)} Bs."
-            }
+            },
+            accent = Color(0xFFEA580C)
         )
     }
 }
 
 @Composable
-fun CompartirToolScreen(viewModel: MainViewModel = viewModel()) {
+fun CompartirToolScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val rates = dashboard?.bcvRates.orEmpty()
@@ -266,48 +276,49 @@ fun CompartirToolScreen(viewModel: MainViewModel = viewModel()) {
     val contacts = preferences.paymentContacts
 
     ToolScaffold {
-        Text(
-            text = "Arma una conversión y compártela (opcional: datos de pago).",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        CurrencyChips(currencies, currency) { currency = it }
-        ToolNumberField(
-            amount,
-            { amount = it },
-            if (convertToVes) "Monto en $currency" else "Monto en Bs."
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = convertToVes,
-                onClick = { convertToVes = true },
-                label = { Text("A bolívares") }
+        ToolIntro("Arma una conversión y compártela (opcional: datos de pago).")
+        ToolPanel {
+            CurrencyChips(currencies, currency) { currency = it }
+            ToolNumberField(
+                amount,
+                { amount = it },
+                if (convertToVes) "Monto en $currency" else "Monto en Bs."
             )
-            FilterChip(
-                selected = !convertToVes,
-                onClick = { convertToVes = false },
-                label = { Text("A $currency") }
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = convertToVes,
+                    onClick = { convertToVes = true },
+                    label = { Text("A bolívares") }
+                )
+                FilterChip(
+                    selected = !convertToVes,
+                    onClick = { convertToVes = false },
+                    label = { Text("A $currency") }
+                )
+            }
         }
         ToolResultCard(
             title = "Resultado",
             value = if (convertToVes) "${FxCalculator.formatAmount(result)} Bs."
-            else "${FxCalculator.formatAmount(result)} $currency"
+            else "${FxCalculator.formatAmount(result)} $currency",
+            accent = Color(0xFF0F766E)
         )
 
         if (contacts.isNotEmpty()) {
-            Text("Incluir datos de pago", fontWeight = FontWeight.SemiBold)
-            FilterChip(
-                selected = selectedPaymentId == null,
-                onClick = { selectedPaymentId = null },
-                label = { Text("Solo conversión") }
-            )
-            contacts.forEach { c ->
+            ToolPanel {
+                Text("Incluir datos de pago", fontWeight = FontWeight.SemiBold)
                 FilterChip(
-                    selected = selectedPaymentId == c.id,
-                    onClick = { selectedPaymentId = c.id },
-                    label = { Text("${c.displayName} · ${c.typeLabel()}") }
+                    selected = selectedPaymentId == null,
+                    onClick = { selectedPaymentId = null },
+                    label = { Text("Solo conversión") }
                 )
+                contacts.forEach { c ->
+                    FilterChip(
+                        selected = selectedPaymentId == c.id,
+                        onClick = { selectedPaymentId = c.id },
+                        label = { Text("${c.displayName} · ${c.typeLabel()}") }
+                    )
+                }
             }
         }
 
@@ -327,9 +338,10 @@ fun CompartirToolScreen(viewModel: MainViewModel = viewModel()) {
                     paymentText = payment?.formatForCopy()
                 )
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = BcvBlue)
         ) {
-            Text("Compartir")
+            Text("Compartir", fontWeight = FontWeight.SemiBold)
         }
     }
 }

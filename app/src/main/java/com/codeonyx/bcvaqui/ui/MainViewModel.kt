@@ -22,7 +22,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FxRepository(preferencesRepository)
 
     val preferences: StateFlow<UserPreferences> = repository.preferences
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserPreferences())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(15_000), UserPreferences())
 
     private val _dashboard = MutableStateFlow<FxDashboard?>(null)
     val dashboard: StateFlow<FxDashboard?> = _dashboard.asStateFlow()
@@ -84,6 +84,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             preferencesRepository.setNotificationIntervalHours(hours)
             com.codeonyx.bcvaqui.worker.WorkScheduler.schedulePeriodicRateCheck(getApplication())
+        }
+    }
+
+    fun setShowBinanceRate(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setShowBinanceRate(enabled)
+            refresh(forceNetwork = true)
         }
     }
 

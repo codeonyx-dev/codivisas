@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,12 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
+import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.currencyAccent
 
@@ -66,7 +70,7 @@ private val notificationOptions = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: MainViewModel = viewModel()) {
+fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
     val preferences by viewModel.preferences.collectAsState()
     val dashboard by viewModel.dashboard.collectAsState()
     val currencies = dashboard?.bcvRates?.keys?.sorted().orEmpty()
@@ -181,10 +185,61 @@ fun SettingsScreen(viewModel: MainViewModel = viewModel()) {
             }
         }
 
+        SettingsCard(
+            title = "Binance P2P",
+            icon = Icons.Default.CurrencyExchange,
+            iconTint = Color(0xFFF0B90B)
+        ) {
+            Text(
+                text = "Muestra la referencia USDT/VES de Binance P2P en Inicio. No es tasa oficial del BCV.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (preferences.showBinanceRate) "Activado" else "Desactivado",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Switch(
+                    checked = preferences.showBinanceRate,
+                    onCheckedChange = { viewModel.setShowBinanceRate(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = BcvBlue
+                    )
+                )
+            }
+            if (preferences.showBinanceRate) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = when {
+                        dashboard?.binanceUsdtVes != null ->
+                            "Ahora: ${FxCalculator.format2(dashboard?.binanceUsdtVes ?: 0.0)} Bs./USDT"
+                        !dashboard?.binanceError.isNullOrBlank() ->
+                            dashboard?.binanceError ?: "Error"
+                        else -> "Consultando Binance…"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (dashboard?.binanceError != null) MaterialTheme.colorScheme.error else BcvBlue,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
         SettingsCard(title = "Información", icon = Icons.Default.Info, iconTint = MaterialTheme.colorScheme.onSurfaceVariant) {
             InfoRow("Última actualización", FxCalculator.formatUpdatedAt(dashboard?.bcvUpdatedAt))
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
             InfoRow("Fuente de datos", "bcv.today")
+            if (preferences.showBinanceRate) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                InfoRow("Referencia P2P", "Binance USDT/VES")
+            }
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
             InfoRow("Widget", "Actualización cada 30 min")
         }

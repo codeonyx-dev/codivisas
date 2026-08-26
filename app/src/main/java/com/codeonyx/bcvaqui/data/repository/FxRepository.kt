@@ -4,6 +4,7 @@ import com.codeonyx.bcvaqui.data.api.NetworkModule
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.local.UserPreferences
 import com.codeonyx.bcvaqui.data.model.BcvRateResponse
+import com.codeonyx.bcvaqui.data.model.BinanceSearchRequest
 import com.codeonyx.bcvaqui.data.model.CurrencyRate
 import com.codeonyx.bcvaqui.data.model.FxDashboard
 import com.codeonyx.bcvaqui.data.model.WhereDestination
@@ -29,9 +30,13 @@ class FxRepository(
             coroutineScope {
                 val bcvDeferred = async { fetchBcvRatesWithRetry() }
                 val worldDeferred = async { fetchWorldRatesSafe() }
+                val binanceDeferred = async {
+                    if (prefs.showBinanceRate) fetchBinanceUsdtVes() else BinanceFetchResult(null, null)
+                }
 
                 val bcvResult = bcvDeferred.await()
                 val world = worldDeferred.await()
+                val binance = binanceDeferred.await()
                 val bcvRates = bcvResult.rates
                 val bcvUpdatedAt = bcvResult.updatedAt
 
@@ -47,6 +52,8 @@ class FxRepository(
                     bcvUpdatedAt = bcvUpdatedAt,
                     worldRatesUsd = world.rates,
                     worldRatesUpdatedAt = world.updatedAt,
+                    binanceUsdtVes = binance.rate,
+                    binanceError = binance.error,
                     isFromCache = false
                 )
             }
@@ -94,6 +101,42 @@ class FxRepository(
         }
     }
 
+    private suspend fun fetchBinanceUsdtVes(): BinanceFetchResult {
+        return runCatching {
+            val response = NetworkModule.binanceP2pApi.searchAds(
+                BinanceSearchRequest(
+                    asset = "USDT",
+                    fiat = "VES",
+                    tradeType = "BUY",
+                    page = 1,
+                    rows = 10,
+                    payTypes = emptyList()
+                )
+            )
+            if (response.code != null && response.code != "000000") {
+                return BinanceFetchResult(
+                    rate = null,
+                    error = response.message?.takeIf { it.isNotBlank() } ?: "Binance no disponible"
+                )
+            }
+            val prices = response.data.orEmpty()
+                .mapNotNull { row -> row.adv?.price?.toDoubleOrNull() }
+                .filter { it > 0 }
+                .sorted()
+            if (prices.isEmpty()) {
+                BinanceFetchResult(null, "Sin anuncios P2P ahora")
+            } else {
+                val mid = prices[prices.size / 2]
+                BinanceFetchResult(FxCalculator.round2(mid), null)
+            }
+        }.getOrElse { error ->
+            BinanceFetchResult(
+                rate = null,
+                error = error.message?.take(80) ?: "Error al consultar Binance"
+            )
+        }
+    }
+
     private fun parseBcvResponse(response: BcvRateResponse): BcvParsedResult {
         val rates = buildMap {
             response.USD?.let { put("USD", CurrencyRate("USD", FxCalculator.round2(it), response.updatedAt)) }
@@ -127,5 +170,10 @@ class FxRepository(
     private data class WorldParsedResult(
         val rates: Map<String, Double>,
         val updatedAt: String?
+    )
+
+    private data class BinanceFetchResult(
+        val rate: Double?,
+        val error: String?
     )
 }

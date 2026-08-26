@@ -1,4 +1,4 @@
-# BCV Aquí
+# SpreadVE
 
 App Android 100% nativa (Kotlin + Jetpack Compose) que muestra las tasas oficiales del Banco Central de Venezuela (BCV), las compara con Binance P2P USDT/VES y el mercado paralelo, e incluye convertidor, widget, notificaciones y calculadora de arbitraje.
 
