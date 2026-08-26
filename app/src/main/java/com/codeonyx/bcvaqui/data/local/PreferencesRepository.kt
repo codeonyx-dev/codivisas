@@ -44,7 +44,9 @@ data class UserPreferences(
     val variationTodayRate: Double? = null,
     /** Umbral % para borde de alerta en widgets (0 = desactivado). */
     val alertThresholdPercent: Double = 1.0,
-    val widgetConvertAmount: Double = 100.0
+    val widgetConvertAmount: Double = 100.0,
+    /** Empieza en true para evitar un parpadeo antes de que DataStore cargue. */
+    val hasSeenOnboarding: Boolean = true
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -67,6 +69,7 @@ class PreferencesRepository(private val context: Context) {
         val VARIATION_TODAY = doublePreferencesKey("variation_today_rate")
         val ALERT_THRESHOLD = doublePreferencesKey("alert_threshold_percent")
         val WIDGET_CONVERT_AMOUNT = doublePreferencesKey("widget_convert_amount")
+        val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -93,7 +96,8 @@ class PreferencesRepository(private val context: Context) {
             variationSnapshotDate = prefs[Keys.VARIATION_DATE],
             variationTodayRate = prefs[Keys.VARIATION_TODAY],
             alertThresholdPercent = prefs[Keys.ALERT_THRESHOLD] ?: 1.0,
-            widgetConvertAmount = prefs[Keys.WIDGET_CONVERT_AMOUNT] ?: 100.0
+            widgetConvertAmount = prefs[Keys.WIDGET_CONVERT_AMOUNT] ?: 100.0,
+            hasSeenOnboarding = prefs[Keys.HAS_SEEN_ONBOARDING] ?: false
         )
     }
 
@@ -107,6 +111,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setShowBinanceRate(enabled: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_BINANCE] = enabled }
+    }
+
+    suspend fun setHasSeenOnboarding(seen: Boolean) {
+        context.dataStore.edit { it[Keys.HAS_SEEN_ONBOARDING] = seen }
     }
 
     suspend fun setAlertThresholdPercent(percent: Double) {

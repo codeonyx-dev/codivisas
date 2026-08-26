@@ -13,7 +13,11 @@ import com.codeonyx.bcvaqui.data.ApiConfig
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.repository.FxRepository
 import com.codeonyx.bcvaqui.widget.Widgets
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /** Refreshes cached rates and updates the home screen widget (no notifications). */
@@ -43,13 +47,18 @@ object WorkScheduler {
     private const val RATE_CHECK_WORK = "rate_check_work"
     private const val WIDGET_REFRESH_WORK = "widget_refresh_work"
     private const val UPDATE_CHECK_WORK = "update_check_work"
+    private val schedulerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun schedulePeriodicRateCheck(context: Context) {
-        val preferencesRepository = PreferencesRepository(context)
-        val intervalHours = kotlinx.coroutines.runBlocking {
-            preferencesRepository.preferences.first().notificationIntervalHours
+        val appContext = context.applicationContext
+        schedulerScope.launch {
+            val intervalHours = PreferencesRepository(appContext)
+                .preferences.first().notificationIntervalHours
+            schedulePeriodicRateCheck(appContext, intervalHours)
         }
+    }
 
+    private fun schedulePeriodicRateCheck(context: Context, intervalHours: Int) {
         WorkManager.getInstance(context).cancelUniqueWork(RATE_CHECK_WORK)
         if (intervalHours <= 0) return
 

@@ -14,22 +14,26 @@ class VariationWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+        val pendingResult = goAsync()
+        Widgets.runAsync(pendingResult) {
+            val snapshot = Widgets.loadSnapshot(context)
+            appWidgetIds.forEach { updateWidget(context, appWidgetManager, it, snapshot) }
+        }
     }
 
     companion object {
-        fun updateAllWidgets(context: Context) {
+        fun updateAllWidgets(context: Context, snapshot: WidgetSnapshot) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, VariationWidgetProvider::class.java))
-            ids.forEach { updateWidget(context, manager, it) }
+            ids.forEach { updateWidget(context, manager, it, snapshot) }
         }
 
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            snap: WidgetSnapshot
         ) {
-            val snap = Widgets.loadSnapshot(context)
             val views = RemoteViews(context.packageName, R.layout.widget_variation)
             Widgets.applyBrandAndAlert(views, R.id.widget_variation_root, snap)
             views.setTextViewText(
@@ -43,7 +47,7 @@ class VariationWidgetProvider : AppWidgetProvider() {
 
             val pct = snap.dayChangePct
             val pctText = when {
-                pct == null -> "Sin dato de ayer aún"
+                pct == null -> "La comparación aparecerá mañana"
                 else -> {
                     val sign = if (pct > 0) "+" else ""
                     "$sign${FxCalculator.format2(pct)}% vs ayer"

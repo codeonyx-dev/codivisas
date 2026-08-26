@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.repository.FxRepository
+import com.codeonyx.bcvaqui.domain.RateSources
 import com.codeonyx.bcvaqui.notification.NotificationHelper
 import com.codeonyx.bcvaqui.widget.Widgets
 import kotlinx.coroutines.flow.first
@@ -23,7 +24,11 @@ class RateCheckWorker(
 
         return repository.refreshDashboard(forceNetwork = true).fold(
             onSuccess = { dashboard ->
-                val newRate = dashboard.bcvRates[currency]?.rateToVes
+                val newRate = RateSources.effectiveRate(
+                    currency = currency,
+                    bcvRates = dashboard.bcvRates,
+                    binanceUsdtVes = dashboard.binanceUsdtVes
+                )
 
                 if (newRate != null && previousRate != null && newRate != previousRate) {
                     NotificationHelper.showRateChangeNotification(

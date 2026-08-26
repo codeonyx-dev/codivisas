@@ -1,6 +1,7 @@
 package com.codeonyx.bcvaqui.widget
 
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -10,8 +11,11 @@ import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.local.UserPreferences
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.domain.RateSources
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 data class WidgetSnapshot(
     val prefs: UserPreferences,
@@ -23,9 +27,11 @@ data class WidgetSnapshot(
 )
 
 object Widgets {
-    fun loadSnapshot(context: Context): WidgetSnapshot {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    suspend fun loadSnapshot(context: Context): WidgetSnapshot {
         val repo = PreferencesRepository(context)
-        val prefs = runBlocking { repo.preferences.first() }
+        val prefs = repo.preferences.first()
         val cached = repo.decodeCachedRates(prefs.lastKnownRatesJson)
         val currency = prefs.selectedCurrency
         val rate = RateSources.effectiveRate(
@@ -69,11 +75,28 @@ object Widgets {
     }
 
     fun updateAll(context: Context) {
-        RateWidgetProvider.updateAllWidgets(context)
-        MiniRateWidgetProvider.updateAllWidgets(context)
-        SpreadWidgetProvider.updateAllWidgets(context)
-        ConverterWidgetProvider.updateAllWidgets(context)
-        VariationWidgetProvider.updateAllWidgets(context)
-        ShareRateWidgetProvider.updateAllWidgets(context)
+        runAsync {
+            val appContext = context.applicationContext
+            val snapshot = loadSnapshot(appContext)
+            RateWidgetProvider.updateAllWidgets(appContext, snapshot)
+            MiniRateWidgetProvider.updateAllWidgets(appContext, snapshot)
+            SpreadWidgetProvider.updateAllWidgets(appContext, snapshot)
+            ConverterWidgetProvider.updateAllWidgets(appContext, snapshot)
+            VariationWidgetProvider.updateAllWidgets(appContext, snapshot)
+            ShareRateWidgetProvider.updateAllWidgets(appContext, snapshot)
+        }
+    }
+
+    fun runAsync(
+        pendingResult: BroadcastReceiver.PendingResult? = null,
+        block: suspend () -> Unit
+    ) {
+        scope.launch {
+            try {
+                block()
+            } finally {
+                pendingResult?.finish()
+            }
+        }
     }
 }
