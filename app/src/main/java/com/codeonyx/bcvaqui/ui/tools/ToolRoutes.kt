@@ -2,6 +2,7 @@ package com.codeonyx.bcvaqui.ui.tools
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallSplit
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Calculate
@@ -25,6 +26,8 @@ object ToolRoutes {
     const val DIVIDIR = "dividir"
     const val COMPARTIR = "compartir"
     const val AGENDA = "agenda"
+    const val PARALELO = "paralelo"
+    const val ARBITRAJE = "arbitraje"
 }
 
 data class ToolItem(
@@ -98,6 +101,20 @@ val toolCatalog = listOf(
         subtitle = "Pago móvil, cuentas y más",
         icon = Icons.Default.AccountBalance,
         tint = Color(0xFF1E3A8A)
+    ),
+    ToolItem(
+        route = ToolRoutes.PARALELO,
+        title = "Comparador paralelo",
+        subtitle = "BCV, P2P y tasa manual",
+        icon = Icons.AutoMirrored.Filled.CompareArrows,
+        tint = Color(0xFF9333EA)
+    ),
+    ToolItem(
+        route = ToolRoutes.ARBITRAJE,
+        title = "Arbitraje",
+        subtitle = "Compra, venta y ganancia neta",
+        icon = Icons.AutoMirrored.Filled.ShowChart,
+        tint = Color(0xFF059669)
     )
 )
 

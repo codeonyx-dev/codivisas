@@ -29,22 +29,8 @@ Desde terminal (con Gradle wrapper):
 |---------|--------|-----|---------------|
 | BCV oficial | bcv.today | `GET https://bcv.today/api/v1/rate.json` | No |
 | Binance P2P | Binance (interno) | `POST https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search` | No |
-| Cotizave (opcional) | Cotizave | `GET https://api.cotizave.com/v1/fx/rates` | Sí (API key) |
 
 Monedas BCV soportadas: **USD, EUR, CNY, TRY, RUB**.
-
-## Configurar API keys (opcional)
-
-### Cotizave
-
-Si quieres datos agregados adicionales de Cotizave, agrega tu clave en `local.properties`:
-
-```properties
-sdk.dir=C\:\\Users\\TU_USUARIO\\AppData\\Local\\Android\\Sdk
-COTIZAVE_API_KEY=ctz_live_tu_clave_aqui
-```
-
-Sin clave, la app funciona igual con las fuentes gratuitas.
 
 ## Cambiar endpoints o intervalos
 
@@ -68,12 +54,13 @@ Los intervalos de notificación se configuran desde **Ajustes** en la app (1, 2,
 - Mensaje amigable sin internet + última tasa en caché
 
 ### Dashboard multi-fuente
-- BCV oficial vs Binance P2P vs Paralelo
-- Columna de diferencia porcentual vs BCV
+- BCV oficial vs Binance P2P
+- Comparador con tasa paralela ingresada manualmente
+- Diferencia porcentual frente al BCV
 
 ### Calculadora de arbitraje
 - Compra en un mercado, vende en otro
-- Ganancia en VES y porcentaje
+- Comisiones, ganancia neta en VES y retorno porcentual
 
 ### Widget
 - Muestra la moneda preferida (`USD: 785.07 VES`)
