@@ -38,7 +38,7 @@ object NetworkModule {
             .addInterceptor { chain ->
                 chain.proceed(
                     chain.request().newBuilder()
-                        .header("User-Agent", "BCV-Aqui/1.0 Android")
+                        .header("User-Agent", "SpreadVE/1.0 Android")
                         .header("Accept", "application/json")
                         .build()
                 )

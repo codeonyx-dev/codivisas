@@ -12,7 +12,7 @@ import androidx.work.WorkerParameters
 import com.codeonyx.bcvaqui.data.ApiConfig
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.repository.FxRepository
-import com.codeonyx.bcvaqui.widget.RateWidgetProvider
+import com.codeonyx.bcvaqui.widget.Widgets
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -26,7 +26,7 @@ class WidgetRefreshWorker(
         val repository = FxRepository(PreferencesRepository(applicationContext))
         return repository.refreshDashboard(forceNetwork = true).fold(
             onSuccess = {
-                RateWidgetProvider.updateAllWidgets(applicationContext)
+                Widgets.updateAll(applicationContext)
                 Result.success()
             },
             onFailure = { Result.retry() }
@@ -42,6 +42,7 @@ class WidgetRefreshWorker(
 object WorkScheduler {
     private const val RATE_CHECK_WORK = "rate_check_work"
     private const val WIDGET_REFRESH_WORK = "widget_refresh_work"
+    private const val UPDATE_CHECK_WORK = "update_check_work"
 
     fun schedulePeriodicRateCheck(context: Context) {
         val preferencesRepository = PreferencesRepository(context)
@@ -86,6 +87,23 @@ object WorkScheduler {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WIDGET_REFRESH_WORK,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    fun scheduleUpdateCheck(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(12, TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            UPDATE_CHECK_WORK,
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )

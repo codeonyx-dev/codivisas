@@ -1,0 +1,47 @@
+package com.codeonyx.bcvaqui.widget
+
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.widget.RemoteViews
+import com.codeonyx.bcvaqui.R
+import com.codeonyx.bcvaqui.domain.FxCalculator
+
+class MiniRateWidgetProvider : AppWidgetProvider() {
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        appWidgetIds.forEach { updateWidget(context, appWidgetManager, it) }
+    }
+
+    companion object {
+        fun updateAllWidgets(context: Context) {
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = manager.getAppWidgetIds(ComponentName(context, MiniRateWidgetProvider::class.java))
+            ids.forEach { updateWidget(context, manager, it) }
+        }
+
+        private fun updateWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int
+        ) {
+            val snap = Widgets.loadSnapshot(context)
+            val views = RemoteViews(context.packageName, R.layout.widget_mini_rate)
+            Widgets.applyBrandAndAlert(views, R.id.widget_mini_root, snap)
+            views.setTextViewText(R.id.widget_mini_code, snap.currency)
+            views.setTextViewText(
+                R.id.widget_mini_rate,
+                snap.rate?.let { FxCalculator.format2(it) } ?: "—"
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_mini_root,
+                Widgets.openAppPending(context, 2000 + appWidgetId)
+            )
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+    }
+}

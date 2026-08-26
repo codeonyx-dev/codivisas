@@ -11,6 +11,7 @@ class BcvAquiApp : Application() {
         super.onCreate()
         createNotificationChannels()
         WorkScheduler.schedulePeriodicRateCheck(this)
+        WorkScheduler.scheduleUpdateCheck(this)
     }
 
     private fun createNotificationChannels() {
@@ -24,9 +25,17 @@ class BcvAquiApp : Application() {
                 NotificationManager.IMPORTANCE_DEFAULT
             )
         )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_APP_UPDATES,
+                getString(R.string.channel_app_updates),
+                NotificationManager.IMPORTANCE_HIGH
+            )
+        )
     }
 
     companion object {
         const val CHANNEL_RATE_CHANGES = "rate_changes"
+        const val CHANNEL_APP_UPDATES = "app_updates"
     }
 }

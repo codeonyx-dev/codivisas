@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".BcvAquiApp"
@@ -23,6 +24,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".widget.ShareRateActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -45,6 +52,75 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/rate_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.MiniRateWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_mini_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mini_rate_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.SpreadWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_spread_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/spread_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ConverterWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_converter_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.codeonyx.bcvaqui.widget.ACTION_CYCLE_AMOUNT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/converter_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.VariationWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_variation_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/variation_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ShareRateWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_share_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/share_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".update.UpdateDownloadReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.codeonyx.bcvaqui.update.ACTION_INSTALL_UPDATE" />
+            </intent-filter>
         </receiver>
 
     </application>

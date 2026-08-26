@@ -5,37 +5,38 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Exchange arrows (white) — upper arc + head -->
-    <path
-        android:pathData="M34,58 A22,22 0 0,1 70,38"
-        android:strokeWidth="6.2"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="butt"
-        android:fillColor="#00000000" />
+    <!-- Filled mark (adaptive icon safe zone ~66dp center) -->
+
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M70,38 L62.2,30.5 L75.8,32.8 Z" />
+        android:pathData="M36,63
+            A22,22 0 0,1 72,40
+            L68,32
+            L84,38
+            L76,48
+            A14,14 0 0,0 44,58
+            Z" />
 
-    <!-- Exchange arrows (white) — lower arc + head -->
-    <path
-        android:pathData="M74,50 A22,22 0 0,1 38,70"
-        android:strokeWidth="6.2"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="butt"
-        android:fillColor="#00000000" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,70 L45.8,77.5 L32.2,75.2 Z" />
+        android:pathData="M72,45
+            A22,22 0 0,1 36,68
+            L40,76
+            L24,70
+            L32,60
+            A14,14 0 0,0 64,50
+            Z" />
 
-    <!-- Gold rate spark -->
-    <path
-        android:pathData="M30,72 C40,66 46,64 52,56 C58,48 64,40 78,30"
-        android:strokeWidth="3.2"
-        android:strokeColor="#FBBF24"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
     <path
         android:fillColor="#FBBF24"
-        android:pathData="M78,30m-3.6,0a3.6,3.6 0,1 1,7.2,0a3.6,3.6 0,1 1,-7.2,0" />
+        android:pathData="M28,76
+            C40,68 46,64 52,56
+            C58,48 64,40 76,32
+            L82,37
+            C70,45 64,52 58,60
+            C52,68 46,72 34,80
+            Z" />
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M78,30m-4.2,0a4.2,4.2 0,1 1,8.4,0a4.2,4.2 0,1 1,-8.4,0" />
 </vector>

@@ -39,7 +39,7 @@ data class FxDashboard(
     val bcvUpdatedAt: String?,
     val worldRatesUsd: Map<String, Double> = emptyMap(),
     val worldRatesUpdatedAt: String? = null,
-    /** Mediana aproximada USDT/VES en Binance P2P (compra), si está habilitado. */
+    /** Mediana aproximada USDT/VES en Binance P2P (compra). */
     val binanceUsdtVes: Double? = null,
     val binanceError: String? = null,
     val isFromCache: Boolean,

@@ -1,10 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SpreadVE</string>
-    <string name="widget_label">SpreadVE</string>
+    <string name="widget_label">SpreadVE · Tasa</string>
     <string name="widget_description">Tasa BCV grande con tu moneda y botón para actualizar</string>
     <string name="widget_refresh">Actualizar tasa</string>
+    <string name="widget_mini_label">SpreadVE · Mini</string>
+    <string name="widget_mini_description">Tasa BCV compacta (1×1)</string>
+    <string name="widget_spread_label">SpreadVE · Comparador</string>
+    <string name="widget_spread_title">SpreadVE · BCV · P2P · Spread</string>
+    <string name="widget_spread_description">Compara tasa BCV, Binance P2P y el spread %</string>
+    <string name="widget_converter_label">SpreadVE · Convertidor</string>
+    <string name="widget_converter_title">Convertidor rápido</string>
+    <string name="widget_converter_cycle">Monto</string>
+    <string name="widget_converter_description">Convierte un monto fijo a bolívares con tasa BCV</string>
+    <string name="widget_variation_label">SpreadVE · Variación</string>
+    <string name="widget_variation_title">Variación del día</string>
+    <string name="widget_variation_description">Tasa BCV y cambio porcentual vs ayer</string>
+    <string name="widget_share_label">SpreadVE · Compartir</string>
+    <string name="widget_share_description">Atajo para compartir la tasa BCV actual</string>
+    <string name="widget_share_action">Compartir tasa</string>
     <string name="channel_rate_changes">Cambios de tasa</string>
+    <string name="channel_app_updates">Actualizaciones de la app</string>
     <string name="notification_rate_up">%1$s subió a %2$s Bs. (era %3$s)</string>
     <string name="notification_rate_down">%1$s bajó a %2$s Bs. (era %3$s)</string>
 </resources>

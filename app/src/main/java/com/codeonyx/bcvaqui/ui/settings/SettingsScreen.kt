@@ -39,24 +39,31 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import com.codeonyx.bcvaqui.BuildConfig
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.currencyAccent
+import com.codeonyx.bcvaqui.update.AppUpdateManager
+import kotlinx.coroutines.launch
 
 private val notificationOptions = listOf(
     0 to "Desactivado",
@@ -68,6 +75,14 @@ private val notificationOptions = listOf(
     24 to "Cada 24 horas"
 )
 
+private val alertThresholdOptions = listOf(
+    0.0 to "Desactivado",
+    0.5 to "±0.5%",
+    1.0 to "±1%",
+    2.0 to "±2%",
+    5.0 to "±5%"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
@@ -77,6 +92,10 @@ fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
 
     var currencyExpanded by remember { mutableStateOf(false) }
     var intervalExpanded by remember { mutableStateOf(false) }
+    var alertExpanded by remember { mutableStateOf(false) }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -232,6 +251,57 @@ fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
             }
         }
 
+        SettingsCard(
+            title = "Alerta visual (widgets)",
+            icon = Icons.Default.Notifications,
+            iconTint = Color(0xFF059669)
+        ) {
+            Text(
+                text = "Si la tasa del día se mueve más que el umbral vs ayer, los widgets muestran borde verde o rojo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            val alertLabel = alertThresholdOptions
+                .firstOrNull { kotlin.math.abs(it.first - preferences.alertThresholdPercent) < 0.01 }
+                ?.second
+                ?: "±1%"
+            ExposedDropdownMenuBox(
+                expanded = alertExpanded,
+                onExpandedChange = { alertExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = alertLabel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Umbral") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(alertExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BcvBlue,
+                        focusedLabelColor = BcvBlue
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = alertExpanded,
+                    onDismissRequest = { alertExpanded = false }
+                ) {
+                    alertThresholdOptions.forEach { (pct, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                viewModel.setAlertThresholdPercent(pct)
+                                alertExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         SettingsCard(title = "Información", icon = Icons.Default.Info, iconTint = MaterialTheme.colorScheme.onSurfaceVariant) {
             InfoRow("Última actualización", FxCalculator.formatUpdatedAt(dashboard?.bcvUpdatedAt))
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -241,7 +311,35 @@ fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
                 InfoRow("Referencia P2P", "Binance USDT/VES")
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            InfoRow("Versión", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
             InfoRow("Widget", "Actualización cada 30 min")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            InfoRow("Hecho por", "Codeonyx")
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(
+                onClick = {
+                    scope.launch {
+                        updateStatus = "Buscando…"
+                        val manifest = AppUpdateManager.checkForUpdate(context, notifyIfAvailable = true)
+                        updateStatus = when {
+                            manifest != null -> "Actualización ${manifest.versionName} disponible"
+                            else -> "Ya tienes la última versión"
+                        }
+                        Toast.makeText(context, updateStatus, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Buscar actualizaciones", fontWeight = FontWeight.SemiBold)
+            }
+            updateStatus?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

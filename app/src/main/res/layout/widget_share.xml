@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_share_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/widget_share_rate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="—"
+        android:textColor="@color/widget_text"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_share_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="USD · BCV"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="10sp" />
+
+    <TextView
+        android:id="@+id/widget_share_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/widget_share_button_bg"
+        android:gravity="center"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="10dp"
+        android:text="@string/widget_share_action"
+        android:textColor="@color/bcv_blue_dark"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+</LinearLayout>
