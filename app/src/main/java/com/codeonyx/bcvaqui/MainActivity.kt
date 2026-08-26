@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         WorkScheduler.scheduleWidgetRefresh(this)
+        AppUpdateManager.resumePendingInstall(this)
         lifecycleScope.launch {
             AppUpdateManager.checkForUpdate(this@MainActivity, notifyIfAvailable = true)
         }
