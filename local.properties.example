@@ -3,3 +3,5 @@ sdk.dir=C\:\\Users\\Codeonyx\\AppData\\Local\\Android\\Sdk
 
 # Optional: Cotizave API key for aggregated multi-exchange rates
 # COTIZAVE_API_KEY=ctz_live_your_key_here
+
+# Firma release: ver keystore.properties.example (no mezclar passwords aquí)
