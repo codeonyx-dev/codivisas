@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +49,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -105,6 +107,7 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
     var amountInput by remember { mutableStateOf("1") }
     var convertToVes by remember { mutableStateOf(true) }
     var currencyMenuExpanded by remember { mutableStateOf(false) }
+    var copyMenuExpanded by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
 
     val amount = amountInput.toDoubleOrNull() ?: 0.0
@@ -138,11 +141,16 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
         foreignAmount = foreignAmount,
         vesAmount = vesAmount,
         updatedAt = dashboard?.bcvUpdatedAt
+            .takeUnless { selectedCurrency == RateSources.BINANCE_USDT }
     )
     val copyText = ReceiptShareHelper.formatConversionLine(receiptData)
+    val copyRateText =
+        "1 $selectedCurrency = ${FxCalculator.format2(selectedRate)} Bs. · $rateSourceLabel"
     val paymentContacts = preferences.paymentContacts
 
-    Box(
+    PullToRefreshBox(
+        isRefreshing = isLoading,
+        onRefresh = { viewModel.refresh(forceNetwork = true) },
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -171,6 +179,7 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
             if (dashboard?.isFromCache == true) {
@@ -377,18 +386,29 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        if (diffPct != null) {
-                            val sign = if (diffPct > 0) "+" else ""
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color.White.copy(alpha = 0.15f)
+                        Column(horizontalAlignment = Alignment.End) {
+                            if (diffPct != null) {
+                                val sign = if (diffPct > 0) "+" else ""
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.White.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = "$sign${FxCalculator.format2(diffPct)}% vs BCV",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = BcvGold,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            TextButton(
+                                onClick = { viewModel.setShowBinanceRate(false) }
                             ) {
                                 Text(
-                                    text = "$sign${FxCalculator.format2(diffPct)}% vs BCV",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = BcvGold,
-                                    fontWeight = FontWeight.Bold
+                                    "Desactivar",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelMedium
                                 )
                             }
                         }
@@ -491,28 +511,48 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            copyToClipboard(context, copyText)
-                            Toast.makeText(context, "Copiado", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                    ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Copiar", fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { copyMenuExpanded = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Copiar", fontWeight = FontWeight.SemiBold)
+                        }
+                        DropdownMenu(
+                            expanded = copyMenuExpanded,
+                            onDismissRequest = { copyMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Copiar tasa") },
+                                onClick = {
+                                    copyMenuExpanded = false
+                                    copyToClipboard(context, copyRateText)
+                                    Toast.makeText(context, "Tasa copiada", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Copiar conversión") },
+                                onClick = {
+                                    copyMenuExpanded = false
+                                    copyToClipboard(context, copyText)
+                                    Toast.makeText(context, "Conversión copiada", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
                     }
 
                     Button(
@@ -571,6 +611,58 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 }
             }
         }
+
+        if (!isLoading && rates.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(BcvBlueDark, BcvBlue, BcvIndigo)
+                        )
+                    )
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = Color.White,
+                    shadowElevation = 6.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = BcvBlue,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "No pudimos cargar las tasas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "Revisa tu conexión e inténtalo nuevamente.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.refresh(forceNetwork = true) },
+                            colors = ButtonDefaults.buttonColors(containerColor = BcvBlue)
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (showShareSheet) {
@@ -584,6 +676,32 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     data = receiptData,
                     paymentText = contact?.formatForCopy()
                 )
+            }
+        )
+    }
+
+    if (!preferences.hasSeenOnboarding) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Bienvenido a SpreadVE") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("• BCV: tasa oficial para USD, EUR y otras monedas.")
+                    Text("• Binance P2P: referencia de mercado para USDT/VES.")
+                    Text("• Dónde: compara cuánto representa un monto en varios países.")
+                    Text(
+                        "Puedes cambiar tu moneda principal y administrar tus datos de pago desde Ajustes.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.completeOnboarding() },
+                    colors = ButtonDefaults.buttonColors(containerColor = BcvBlue)
+                ) {
+                    Text("Entendido")
+                }
             }
         )
     }

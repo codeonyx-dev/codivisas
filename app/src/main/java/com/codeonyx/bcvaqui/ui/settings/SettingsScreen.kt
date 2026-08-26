@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Paid
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import com.codeonyx.bcvaqui.BuildConfig
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
@@ -85,10 +87,16 @@ private val alertThresholdOptions = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
+fun SettingsScreen(
+    viewModel: MainViewModel = appViewModel(),
+    onOpenPaymentAgenda: () -> Unit = {}
+) {
     val preferences by viewModel.preferences.collectAsState()
     val dashboard by viewModel.dashboard.collectAsState()
-    val currencies = dashboard?.bcvRates?.keys?.sorted().orEmpty()
+    val currencies = buildList {
+        addAll(dashboard?.bcvRates?.keys?.sorted().orEmpty())
+        add(RateSources.BINANCE_USDT)
+    }.distinct()
 
     var currencyExpanded by remember { mutableStateOf(false) }
     var intervalExpanded by remember { mutableStateOf(false) }
@@ -156,9 +164,28 @@ fun SettingsScreen(viewModel: MainViewModel = appViewModel()) {
             }
         }
 
+        SettingsCard(
+            title = "Datos de pago",
+            icon = Icons.Default.AccountBalanceWallet,
+            iconTint = BcvBlue
+        ) {
+            Text(
+                text = "Guarda pago móvil y cuentas para incluirlos al compartir conversiones.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = onOpenPaymentAgenda,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Abrir agenda de pagos", fontWeight = FontWeight.SemiBold)
+            }
+        }
+
         SettingsCard(title = "Notificaciones", icon = Icons.Default.Notifications, iconTint = BcvBlue) {
             Text(
-                text = "Recibe avisos cuando cambie la tasa BCV de tu moneda.",
+                text = "Recibe avisos cuando cambie la tasa de tu moneda principal.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
