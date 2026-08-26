@@ -14,6 +14,7 @@ import com.codeonyx.bcvaqui.data.ApiConfig
 import com.codeonyx.bcvaqui.data.model.CurrencyRate
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.model.WhereDestination
+import com.codeonyx.bcvaqui.domain.RateSources
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -156,7 +157,7 @@ class PreferencesRepository(private val context: Context) {
         binanceUsdtVes: Double? = null
     ) {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val selectedRate = rates[selectedCurrency]?.rateToVes
+        val selectedRate = RateSources.effectiveRate(selectedCurrency, rates, binanceUsdtVes)
         context.dataStore.edit { prefs ->
             prefs[Keys.LAST_RATES_JSON] = json.encodeToString(rates.values.toList())
             updatedAt?.let { prefs[Keys.LAST_UPDATED_AT] = it }

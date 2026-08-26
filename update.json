@@ -1,6 +1,6 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.1.0/SpreadVE.apk",
-  "releaseNotes": "Widgets SpreadVE, formato 1.000,93, comparador BCV/P2P y actualizaciones automáticas."
+  "versionCode": 3,
+  "versionName": "1.1.1",
+  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.1.1/SpreadVE.apk",
+  "releaseNotes": "Calcula con tasa Binance P2P (USDT), firma de producción y mejoras de widgets."
 }

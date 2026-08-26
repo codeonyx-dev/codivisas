@@ -18,8 +18,9 @@ val RateUp = SuccessGreen
 val RateDown = DangerRed
 
 fun currencyAccent(code: String): Color = when (code) {
-    "USD" -> Color(0xFF059669)
-    "EUR" -> Color(0xFF2563EB)
+        "USD" -> Color(0xFF059669)
+        "USDT" -> Color(0xFFF0B90B)
+        "EUR" -> Color(0xFF2563EB)
     "CNY" -> Color(0xFFDC2626)
     "TRY" -> Color(0xFFD97706)
     "RUB" -> Color(0xFF7C3AED)

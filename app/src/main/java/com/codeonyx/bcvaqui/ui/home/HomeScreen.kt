@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.ResultSpring
 import com.codeonyx.bcvaqui.ui.appViewModel
@@ -93,10 +94,13 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
 
     val rates = dashboard?.bcvRates.orEmpty()
     val currencies = rates.keys.sorted()
-    val selectedCurrency = preferences.selectedCurrency.takeIf { it in currencies }
-        ?: currencies.firstOrNull()
-        ?: "USD"
-    val selectedRate = rates[selectedCurrency]?.rateToVes ?: 0.0
+    val binanceRate = dashboard?.binanceUsdtVes ?: preferences.lastKnownBinanceUsdtVes
+    val selectedCurrency = when (val code = preferences.selectedCurrency) {
+        RateSources.BINANCE_USDT -> RateSources.BINANCE_USDT
+        else -> code.takeIf { it in currencies } ?: currencies.firstOrNull() ?: "USD"
+    }
+    val selectedRate = RateSources.effectiveRate(selectedCurrency, rates, binanceRate) ?: 0.0
+    val rateSourceLabel = RateSources.rateSourceLabel(selectedCurrency)
 
     var amountInput by remember { mutableStateOf("1") }
     var convertToVes by remember { mutableStateOf(true) }
@@ -236,6 +240,15 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
+                            Text(
+                                text = rateSourceLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (selectedCurrency == RateSources.BINANCE_USDT) {
+                                    Color(0xFFF0B90B)
+                                } else {
+                                    Color.White.copy(alpha = 0.5f)
+                                }
+                            )
                         }
                         Icon(
                             Icons.Default.KeyboardArrowDown,
@@ -250,6 +263,39 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     onDismissRequest = { currencyMenuExpanded = false },
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 ) {
+                    if (binanceRate != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CurrencyBadge(
+                                        code = RateSources.BINANCE_USDT,
+                                        size = 32.dp,
+                                        accent = currencyAccent(RateSources.BINANCE_USDT)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "USDT Binance P2P · USDT",
+                                            fontWeight = if (selectedCurrency == RateSources.BINANCE_USDT) {
+                                                FontWeight.Bold
+                                            } else {
+                                                FontWeight.Normal
+                                            }
+                                        )
+                                        Text(
+                                            text = "${FxCalculator.format2(binanceRate)} Bs.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                viewModel.setSelectedCurrency(RateSources.BINANCE_USDT)
+                                currencyMenuExpanded = false
+                            }
+                        )
+                    }
                     currencies.forEach { code ->
                         DropdownMenuItem(
                             text = {
@@ -278,24 +324,35 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 }
             }
 
-            if (preferences.showBinanceRate) {
+            if (preferences.showBinanceRate || selectedCurrency == RateSources.BINANCE_USDT) {
                 Spacer(modifier = Modifier.height(12.dp))
             }
             AnimatedVisibility(
-                visible = preferences.showBinanceRate,
+                visible = preferences.showBinanceRate || selectedCurrency == RateSources.BINANCE_USDT,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                val binance = dashboard?.binanceUsdtVes
+                val binance = dashboard?.binanceUsdtVes ?: preferences.lastKnownBinanceUsdtVes
                 val bcvUsd = rates["USD"]?.rateToVes
                 val diffPct = if (binance != null && bcvUsd != null && bcvUsd > 0) {
                     FxCalculator.round2((binance - bcvUsd) / bcvUsd * 100.0)
                 } else null
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = binance != null) {
+                            viewModel.setSelectedCurrency(RateSources.BINANCE_USDT)
+                        },
                     shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF0B90B).copy(alpha = 0.18f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0B90B).copy(alpha = 0.45f))
+                    color = Color(0xFFF0B90B).copy(
+                        alpha = if (selectedCurrency == RateSources.BINANCE_USDT) 0.28f else 0.18f
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        Color(0xFFF0B90B).copy(
+                            alpha = if (selectedCurrency == RateSources.BINANCE_USDT) 0.75f else 0.45f
+                        )
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),

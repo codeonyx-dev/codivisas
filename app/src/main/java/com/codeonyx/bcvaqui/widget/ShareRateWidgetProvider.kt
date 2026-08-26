@@ -9,6 +9,7 @@ import android.content.Intent
 import android.widget.RemoteViews
 import com.codeonyx.bcvaqui.R
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 
 class ShareRateWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -40,7 +41,7 @@ class ShareRateWidgetProvider : AppWidgetProvider() {
             )
             views.setTextViewText(
                 R.id.widget_share_label,
-                "${snap.currency} · BCV"
+                "${snap.currency} · ${RateSources.rateSourceLabel(snap.currency)}"
             )
 
             val shareIntent = Intent(context, ShareRateActivity::class.java).apply {

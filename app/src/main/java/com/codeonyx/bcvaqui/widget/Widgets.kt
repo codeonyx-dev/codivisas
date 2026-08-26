@@ -9,6 +9,7 @@ import com.codeonyx.bcvaqui.R
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.local.UserPreferences
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -27,8 +28,11 @@ object Widgets {
         val prefs = runBlocking { repo.preferences.first() }
         val cached = repo.decodeCachedRates(prefs.lastKnownRatesJson)
         val currency = prefs.selectedCurrency
-        val rate = cached[currency]?.rateToVes
-            ?: prefs.variationTodayRate
+        val rate = RateSources.effectiveRate(
+            currency = currency,
+            bcvRates = cached,
+            binanceUsdtVes = prefs.lastKnownBinanceUsdtVes
+        ) ?: prefs.variationTodayRate
             ?: prefs.lastKnownSelectedCurrencyRate
             ?: if (currency == "USD") prefs.lastKnownUsdRate else null
 
