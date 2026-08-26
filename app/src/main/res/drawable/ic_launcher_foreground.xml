@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Soft gold glow -->
+    <path
+        android:fillColor="#33FBBF24"
+        android:pathData="M54,10c-24.3,0 -44,19.7 -44,44s19.7,44 44,44 44,-19.7 44,-44 -19.7,-44 -44,-44z" />
+    <!-- Blue badge -->
+    <path
+        android:fillColor="#1E3A8A"
+        android:pathData="M54,16c-21,0 -38,17 -38,38s17,38 38,38 38,-17 38,-38 -17,-38 -38,-38z" />
+    <!-- Gold ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="3.5"
+        android:pathData="M54,24c-16.6,0 -30,13.4 -30,30s13.4,30 30,30 30,-13.4 30,-30 -13.4,-30 -30,-30z" />
+    <!-- Dollar mark -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M50,34h8v4.5c5.5,0.8 9.5,3.8 9.5,9.2 0,4.2 -2.4,7 -6.2,8.4l0.2,0.1c4.8,1.6 7.8,4.8 7.8,10.2 0,6.8 -5.6,11.2 -14.3,11.8V84h-5v-5.6c-7.2,-0.6 -12.4,-4.4 -13.6,-11.2h7.2c0.9,3.6 3.8,5.6 8.4,5.6 4.6,0 7.6,-2 7.6,-5.6 0,-3.4 -2.4,-5.2 -8.2,-6.8l-4,-1.1v-5.2l4,-1.1c5,-1.4 7.4,-3.6 7.4,-7.2 0,-3.4 -2.6,-5.4 -7,-5.4 -4.2,0 -7,2 -7.8,5.4h-7c1,-7 6.2,-11 14.6,-11.6V34z" />
+</vector>

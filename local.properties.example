@@ -1,0 +1,5 @@
+# Local SDK path — Android Studio generates this automatically
+sdk.dir=C\:\\Users\\Codeonyx\\AppData\\Local\\Android\\Sdk
+
+# Optional: Cotizave API key for aggregated multi-exchange rates
+# COTIZAVE_API_KEY=ctz_live_your_key_here
