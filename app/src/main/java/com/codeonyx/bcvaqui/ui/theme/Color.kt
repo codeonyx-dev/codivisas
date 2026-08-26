@@ -13,6 +13,9 @@ val CardElevated = Color(0xFFFFFFFF)
 val OnSurfaceMuted = Color(0xFF64748B)
 val DividerLight = Color(0xFFE2E8F0)
 val SuccessGreen = Color(0xFF059669)
+val DangerRed = Color(0xFFDC2626)
+val RateUp = SuccessGreen
+val RateDown = DangerRed
 
 fun currencyAccent(code: String): Color = when (code) {
     "USD" -> Color(0xFF059669)

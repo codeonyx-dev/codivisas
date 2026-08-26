@@ -4,10 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -90,28 +89,62 @@ object ReceiptShareHelper {
         val cardRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
         canvas.drawRoundRect(cardRect, dp(28f), dp(28f), bgPaint)
 
-        // Logo circle with gradient ring
+        // Logo disc with exchange + spark mark
         val logoCx = dp(50f)
         val logoCy = dp(52f)
         val logoR = dp(26f)
-        val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(
-                logoCx, logoCy - logoR, logoCx, logoCy + logoR,
-                intArrayOf(0xFFFBBF24.toInt(), 0xFF1E3A8A.toInt(), 0xFFDC2626.toInt()),
-                null,
-                Shader.TileMode.CLAMP
+        val discPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1E3A8A.toInt() }
+        canvas.drawCircle(logoCx, logoCy, logoR, discPaint)
+
+        val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = dp(3.2f)
+            strokeCap = Paint.Cap.BUTT
+        }
+        val r = dp(12f)
+        canvas.drawArc(
+            logoCx - r, logoCy - r, logoCx + r, logoCy + r,
+            200f, 140f, false, arrowPaint
+        )
+        canvas.drawArc(
+            logoCx - r, logoCy - r, logoCx + r, logoCy + r,
+            20f, 140f, false, arrowPaint
+        )
+        val headPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+        val head1 = Path().apply {
+            moveTo(logoCx + r * 0.72f, logoCy - r * 0.7f)
+            lineTo(logoCx + r * 0.35f, logoCy - r * 1.05f)
+            lineTo(logoCx + r * 1.05f, logoCy - r * 0.95f)
+            close()
+        }
+        val head2 = Path().apply {
+            moveTo(logoCx - r * 0.72f, logoCy + r * 0.7f)
+            lineTo(logoCx - r * 0.35f, logoCy + r * 1.05f)
+            lineTo(logoCx - r * 1.05f, logoCy + r * 0.95f)
+            close()
+        }
+        canvas.drawPath(head1, headPaint)
+        canvas.drawPath(head2, headPaint)
+
+        val sparkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFBBF24.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = dp(2f)
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        val spark = Path().apply {
+            moveTo(logoCx - dp(12f), logoCy + dp(10f))
+            cubicTo(
+                logoCx - dp(4f), logoCy + dp(6f),
+                logoCx, logoCy,
+                logoCx + dp(12f), logoCy - dp(12f)
             )
         }
-        canvas.drawCircle(logoCx, logoCy, logoR, ringPaint)
-        val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF172554.toInt() }
-        canvas.drawCircle(logoCx, logoCy, dp(18f), innerPaint)
-        val dollarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFFFBBF24.toInt()
-            textSize = dp(22f)
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
-        canvas.drawText("$", logoCx, logoCy + dp(8f), dollarPaint)
+        canvas.drawPath(spark, sparkPaint)
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFBBF24.toInt() }
+        canvas.drawCircle(logoCx + dp(12f), logoCy - dp(12f), dp(2.4f), dotPaint)
 
         // Title
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -123,7 +156,7 @@ object ReceiptShareHelper {
             color = 0xFFA1A1AA.toInt()
             textSize = dp(13f)
         }
-        canvas.drawText("BCV Aquí", dp(86f), dp(48f), titlePaint)
+        canvas.drawText("SpreadVE", dp(86f), dp(48f), titlePaint)
         canvas.drawText("Comprobante de Cálculo", dp(86f), dp(68f), subtitlePaint)
 
         // White rate card

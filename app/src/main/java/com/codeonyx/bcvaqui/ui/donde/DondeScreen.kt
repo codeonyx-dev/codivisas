@@ -65,7 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.data.model.WhereDestination
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
@@ -75,7 +75,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DondeScreen(viewModel: MainViewModel = viewModel()) {
+fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
     val dashboard by viewModel.dashboard.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

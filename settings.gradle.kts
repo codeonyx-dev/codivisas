@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BCV-Aqui"
+rootProject.name = "SpreadVE"
 include(":app")

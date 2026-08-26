@@ -1,5 +1,10 @@
 package com.codeonyx.bcvaqui.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +78,7 @@ private val bottomRoutes = listOf(AppRoute.Home, AppRoute.Tools, AppRoute.Settin
 @Composable
 fun BcvAquiNavHost() {
     val navController = rememberNavController()
+    val viewModel = appViewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentBottom = bottomRoutes.firstOrNull { route ->
@@ -84,6 +90,12 @@ fun BcvAquiNavHost() {
         it != ToolRoutes.HUB && it != ToolRoutes.GRAPH && currentBottom == AppRoute.Tools
     }
     val showToolBack = toolLeaf != null
+    val titleKey = when (currentBottom) {
+        AppRoute.Home -> "home"
+        AppRoute.Tools -> toolLeaf ?: "tools"
+        AppRoute.Settings -> "settings"
+        null -> "app"
+    }
 
     Box(
         modifier = Modifier
@@ -95,7 +107,11 @@ fun BcvAquiNavHost() {
             topBar = {
                 TopAppBar(
                     navigationIcon = {
-                        if (showToolBack) {
+                        AnimatedVisibility(
+                            visible = showToolBack,
+                            enter = fadeIn() + slideInVertically { -it / 2 },
+                            exit = fadeOut()
+                        ) {
                             IconButton(onClick = { navController.popBackStack() }) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -106,41 +122,47 @@ fun BcvAquiNavHost() {
                         }
                     },
                     title = {
-                        when (currentBottom) {
-                            AppRoute.Home -> {
-                                Column {
+                        AnimatedContent(
+                            targetState = titleKey,
+                            transitionSpec = { Motion.titleTransform() },
+                            label = "topTitle"
+                        ) { key ->
+                            when {
+                                key == "home" -> {
+                                    Column {
+                                        Text(
+                                            text = "SpreadVE",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                        Text(
+                                            text = "Tasas BCV, paralelo y P2P",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+                                        )
+                                    }
+                                }
+                                key == "settings" -> {
                                     Text(
-                                        text = "BCV Aquí",
+                                        text = "Ajustes",
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.titleLarge
                                     )
-                                    Text(
-                                        text = "Tasas oficiales del Banco Central",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
-                                    )
                                 }
-                            }
-                            AppRoute.Tools -> {
-                                Column {
-                                    Text(
-                                        text = toolTitle(toolLeaf),
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                    Text(
-                                        text = toolSubtitle(toolLeaf),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
-                                    )
+                                else -> {
+                                    Column {
+                                        Text(
+                                            text = toolTitle(toolLeaf),
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                        Text(
+                                            text = toolSubtitle(toolLeaf),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+                                        )
+                                    }
                                 }
-                            }
-                            else -> {
-                                Text(
-                                    text = currentBottom?.label ?: "BCV Aquí",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
                             }
                         }
                     },
@@ -198,33 +220,58 @@ fun BcvAquiNavHost() {
                 NavHost(
                     navController = navController,
                     startDestination = AppRoute.Home.route,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = { Motion.tabEnter() },
+                    exitTransition = { Motion.tabExit() },
+                    popEnterTransition = { Motion.tabEnter() },
+                    popExitTransition = { Motion.tabExit() }
                 ) {
-                    composable(AppRoute.Home.route) { HomeScreen() }
+                    composable(AppRoute.Home.route) {
+                        HomeScreen(viewModel = viewModel)
+                    }
                     navigation(
                         startDestination = ToolRoutes.HUB,
                         route = ToolRoutes.GRAPH
                     ) {
-                        composable(ToolRoutes.HUB) {
-                            ToolsHubScreen(
-                                onOpenTool = { tool ->
-                                    navController.navigate(tool)
-                                }
-                            )
+                        composable(
+                            route = ToolRoutes.HUB,
+                            enterTransition = { Motion.tabEnter() },
+                            exitTransition = { Motion.toolExit() },
+                            popEnterTransition = { Motion.toolPopEnter() },
+                            popExitTransition = { Motion.tabExit() }
+                        ) {
+                            ToolsHubScreen(onOpenTool = { navController.navigate(it) })
                         }
-                        composable(ToolRoutes.DONDE) { DondeScreen() }
-                        composable(ToolRoutes.ALCANZA) { AlcanzaScreen() }
-                        composable(ToolRoutes.COMISION) { ComisionScreen() }
-                        composable(ToolRoutes.VARIACION) { VariacionScreen() }
-                        composable(ToolRoutes.HISTORIAL) { HistorialScreen() }
-                        composable(ToolRoutes.META) { MetaScreen() }
-                        composable(ToolRoutes.DIVIDIR) { DividirScreen() }
-                        composable(ToolRoutes.COMPARTIR) { CompartirToolScreen() }
-                        composable(ToolRoutes.AGENDA) { AgendaPagosScreen() }
+                        toolComposable(ToolRoutes.DONDE) { DondeScreen(viewModel) }
+                        toolComposable(ToolRoutes.ALCANZA) { AlcanzaScreen(viewModel) }
+                        toolComposable(ToolRoutes.COMISION) { ComisionScreen() }
+                        toolComposable(ToolRoutes.VARIACION) { VariacionScreen(viewModel) }
+                        toolComposable(ToolRoutes.HISTORIAL) { HistorialScreen(viewModel) }
+                        toolComposable(ToolRoutes.META) { MetaScreen(viewModel) }
+                        toolComposable(ToolRoutes.DIVIDIR) { DividirScreen(viewModel) }
+                        toolComposable(ToolRoutes.COMPARTIR) { CompartirToolScreen(viewModel) }
+                        toolComposable(ToolRoutes.AGENDA) { AgendaPagosScreen(viewModel) }
                     }
-                    composable(AppRoute.Settings.route) { SettingsScreen() }
+                    composable(AppRoute.Settings.route) {
+                        SettingsScreen(viewModel = viewModel)
+                    }
                 }
             }
         }
+    }
+}
+
+private fun androidx.navigation.NavGraphBuilder.toolComposable(
+    route: String,
+    content: @Composable () -> Unit
+) {
+    composable(
+        route = route,
+        enterTransition = { Motion.toolEnter() },
+        exitTransition = { Motion.toolExit() },
+        popEnterTransition = { Motion.toolPopEnter() },
+        popExitTransition = { Motion.toolPopExit() }
+    ) {
+        content()
     }
 }

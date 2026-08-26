@@ -7,15 +7,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,20 +38,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
+import com.codeonyx.bcvaqui.ui.theme.RateDown
+import com.codeonyx.bcvaqui.ui.theme.RateUp
 import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
 
 @Composable
-fun HistorialScreen(viewModel: MainViewModel = viewModel()) {
+fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
     val history by viewModel.history.collectAsState()
     val loading by viewModel.historyLoading.collectAsState()
     val error by viewModel.historyError.collectAsState()
@@ -55,36 +67,32 @@ fun HistorialScreen(viewModel: MainViewModel = viewModel()) {
         viewModel.loadHistory(days)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SurfaceLight)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Evolución de la tasa oficial BCV.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    ToolScaffold {
+        ToolIntro("Evolución de la tasa oficial BCV. Verde = subió, rojo = bajó.")
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(7, 30, 90).forEach { d ->
-                FilterChip(
-                    selected = days == d,
-                    onClick = { days = d },
-                    label = { Text("$d días") }
-                )
+        ToolPanel {
+            Text("Período", fontWeight = FontWeight.SemiBold)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(7, 30, 90).forEach { d ->
+                    FilterChip(
+                        selected = days == d,
+                        onClick = { days = d },
+                        label = { Text("$d días", fontWeight = if (days == d) FontWeight.Bold else FontWeight.Medium) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
+                            selectedLabelColor = BcvBlue
+                        )
+                    )
+                }
             }
+            Text("Moneda", fontWeight = FontWeight.SemiBold)
+            CurrencyChips(listOf("USD", "EUR", "CNY", "TRY", "RUB"), currency) { currency = it }
         }
-
-        CurrencyChips(listOf("USD", "EUR", "CNY", "TRY", "RUB"), currency) { currency = it }
 
         when {
             loading && history.isEmpty() -> {
@@ -94,11 +102,11 @@ fun HistorialScreen(viewModel: MainViewModel = viewModel()) {
                         .height(220.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = BcvBlue)
                 }
             }
             error != null && history.isEmpty() -> {
-                Column {
+                ToolPanel {
                     Text(error ?: "", color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { viewModel.loadHistory(days) }) {
                         Text("Reintentar")
@@ -118,29 +126,38 @@ fun HistorialScreen(viewModel: MainViewModel = viewModel()) {
                 }
 
                 if (points.isEmpty()) {
-                    Text("Sin datos para $currency en este período.")
+                    ToolPanel { Text("Sin datos para $currency en este período.") }
                 } else {
                     val first = points.first().second
                     val last = points.last().second
                     val change = FxCalculator.round2(last - first)
                     val pct = if (first > 0) FxCalculator.round2((last - first) / first * 100.0) else 0.0
-                    val sign = if (pct >= 0) "+" else ""
+                    val periodColor = when {
+                        pct > 0.005 -> RateUp
+                        pct < -0.005 -> RateDown
+                        else -> BcvBlue
+                    }
 
                     ToolResultCard(
                         title = "Última tasa $currency",
                         value = "${FxCalculator.format2(last)} Bs.",
-                        detail = "$sign${FxCalculator.format2(pct)}% en $days días (${sign}${FxCalculator.format2(change)} Bs.)"
+                        detail = "${FxCalculator.format2(change)} Bs. en $days días",
+                        accent = periodColor,
+                        changePercent = pct
                     )
 
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp),
-                        shape = RoundedCornerShape(16.dp),
+                            .height(230.dp),
+                        shape = RoundedCornerShape(20.dp),
                         color = Color.White,
-                        shadowElevation = 1.dp
+                        shadowElevation = 2.dp
                     ) {
-                        RateChart(values = points.map { it.second }, lineColor = BcvBlue)
+                        RateChart(
+                            values = points.map { it.second },
+                            lineColor = periodColor
+                        )
                     }
 
                     Text(
@@ -149,18 +166,76 @@ fun HistorialScreen(viewModel: MainViewModel = viewModel()) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    points.takeLast(7).asReversed().forEach { (date, rate) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(date.ifBlank { "—" }, fontWeight = FontWeight.Medium)
-                            Text("${FxCalculator.format2(rate)} Bs.")
+                    ToolPanel {
+                        Text(
+                            text = "Últimos días",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        points.takeLast(10).asReversed().forEachIndexed { index, (date, rate) ->
+                            val older = points.takeLast(10).asReversed().getOrNull(index + 1)?.second
+                            val dayPct = if (older != null && older > 0) {
+                                FxCalculator.round2((rate - older) / older * 100.0)
+                            } else {
+                                null
+                            }
+                            HistoryDayRow(date = date, rate = rate, dayChangePct = dayPct)
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryDayRow(date: String, rate: Double, dayChangePct: Double?) {
+    val up = (dayChangePct ?: 0.0) > 0.005
+    val down = (dayChangePct ?: 0.0) < -0.005
+    val color = when {
+        up -> RateUp
+        down -> RateDown
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceLight)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                up -> Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = color, modifier = Modifier.size(18.dp))
+                down -> Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = color, modifier = Modifier.size(18.dp))
+                else -> Text("·", color = color, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(date.ifBlank { "—" }, fontWeight = FontWeight.SemiBold)
+            if (dayChangePct != null) {
+                val sign = if (dayChangePct > 0) "+" else ""
+                Text(
+                    text = "$sign${FxCalculator.format2(dayChangePct)}% vs día anterior",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color
+                )
+            }
+        }
+        Text(
+            text = "${FxCalculator.format2(rate)} Bs.",
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -182,15 +257,32 @@ private fun RateChart(values: List<Double>, lineColor: Color) {
         ) {
             val stepX = size.width / (values.size - 1).coerceAtLeast(1)
             val path = Path()
+            val fill = Path()
             values.forEachIndexed { index, value ->
                 val x = index * stepX
                 val y = size.height - (((value - min) / range).toFloat() * size.height)
-                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                if (index == 0) {
+                    path.moveTo(x, y)
+                    fill.moveTo(x, size.height)
+                    fill.lineTo(x, y)
+                } else {
+                    path.lineTo(x, y)
+                    fill.lineTo(x, y)
+                }
             }
-            drawPath(path, color = lineColor, style = Stroke(width = 4f))
+            fill.lineTo((values.lastIndex) * stepX, size.height)
+            fill.close()
+            drawPath(
+                fill,
+                brush = Brush.verticalGradient(
+                    listOf(lineColor.copy(alpha = 0.22f), Color.Transparent)
+                )
+            )
+            drawPath(path, color = lineColor, style = Stroke(width = 5f))
             val lastX = (values.lastIndex) * stepX
             val lastY = size.height - (((values.last() - min) / range).toFloat() * size.height)
-            drawCircle(color = lineColor, radius = 8f, center = Offset(lastX, lastY))
+            drawCircle(color = lineColor, radius = 9f, center = Offset(lastX, lastY))
+            drawCircle(color = Color.White, radius = 4f, center = Offset(lastX, lastY))
         }
     }
 }

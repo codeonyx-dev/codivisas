@@ -53,7 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.model.PaymentType
 import com.codeonyx.bcvaqui.data.model.VenezuelanBanks
@@ -64,7 +64,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgendaPagosScreen(viewModel: MainViewModel = viewModel()) {
+fun AgendaPagosScreen(viewModel: MainViewModel = appViewModel()) {
     val preferences by viewModel.preferences.collectAsState()
     val contacts = preferences.paymentContacts
     val context = LocalContext.current
