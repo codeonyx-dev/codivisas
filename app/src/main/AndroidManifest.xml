@@ -120,6 +120,15 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.codeonyx.bcvaqui.update.ACTION_INSTALL_UPDATE" />
+                <action android:name="com.codeonyx.bcvaqui.update.ACTION_INSTALL_DOWNLOADED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>
         </receiver>
 
