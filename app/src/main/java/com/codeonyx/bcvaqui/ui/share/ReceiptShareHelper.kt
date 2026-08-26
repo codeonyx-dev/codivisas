@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.RateSources
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -185,7 +186,7 @@ object ReceiptShareHelper {
         val cx = width / 2f
         canvas.drawText("TASA UTILIZADA", cx, dp(132f), labelPaint)
         canvas.drawText("Bs. ${FxCalculator.format2(data.rateToVes)}", cx, dp(172f), ratePaint)
-        canvas.drawText("(Tasa BCV)", cx, dp(194f), sourcePaint)
+        canvas.drawText("(${RateSources.rateSourceLabel(data.currencyCode)})", cx, dp(194f), sourcePaint)
 
         // Amounts row
         val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

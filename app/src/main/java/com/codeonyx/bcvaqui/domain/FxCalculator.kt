@@ -90,6 +90,7 @@ object FxCalculator {
 
     fun currencyLabel(code: String): String = when (code) {
         "USD" -> "Dólar"
+        "USDT" -> "USDT Binance P2P"
         "EUR" -> "Euro"
         "CNY" -> "Yuan chino"
         "TRY" -> "Lira turca"
@@ -109,6 +110,7 @@ object FxCalculator {
 
     fun currencySymbol(code: String): String = when (code) {
         "USD" -> "$"
+        "USDT" -> "USDT"
         "EUR" -> "€"
         "CNY" -> "¥"
         "TRY" -> "₺"
