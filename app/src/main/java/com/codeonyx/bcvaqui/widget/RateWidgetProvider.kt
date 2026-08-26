@@ -11,13 +11,9 @@ import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.codeonyx.bcvaqui.MainActivity
 import com.codeonyx.bcvaqui.R
-import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.worker.WidgetRefreshWorker
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 class RateWidgetProvider : AppWidgetProvider() {
 
@@ -41,8 +37,7 @@ class RateWidgetProvider : AppWidgetProvider() {
                 .setConstraints(constraints)
                 .build()
             WorkManager.getInstance(context).enqueue(request)
-            // Optimistic UI refresh from cache while network fetch runs
-            updateAllWidgets(context)
+            Widgets.updateAll(context)
         }
     }
 
@@ -62,39 +57,34 @@ class RateWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val prefs = runBlocking {
-                PreferencesRepository(context).preferences.first()
-            }
-            val cachedRates = PreferencesRepository(context).decodeCachedRates(prefs.lastKnownRatesJson)
-            val currency = prefs.selectedCurrency
-            val rate = cachedRates[currency]?.rateToVes
-                ?: if (currency == "USD") prefs.lastKnownUsdRate else null
-
+            val snap = Widgets.loadSnapshot(context)
             val views = RemoteViews(context.packageName, R.layout.widget_rate)
+            Widgets.applyBrandAndAlert(views, R.id.widget_root, snap)
             views.setTextViewText(
                 R.id.widget_currency_label,
-                "${FxCalculator.currencyLabel(currency)} · $currency"
+                "${FxCalculator.currencyLabel(snap.currency)} · ${snap.currency}"
             )
-            if (rate != null) {
-                views.setTextViewText(R.id.widget_rate_text, FxCalculator.format2(rate))
-                views.setTextViewText(R.id.widget_rate_suffix, "Bs. por 1 $currency")
+            if (snap.rate != null) {
+                views.setTextViewText(R.id.widget_rate_text, FxCalculator.format2(snap.rate))
+                views.setTextViewText(R.id.widget_rate_suffix, "Bs. por 1 ${snap.currency}")
             } else {
                 views.setTextViewText(R.id.widget_rate_text, "—")
                 views.setTextViewText(R.id.widget_rate_suffix, "Sin datos aún")
             }
-            views.setTextViewText(
-                R.id.widget_updated_text,
-                "Actualizado: ${FxCalculator.formatUpdatedAt(prefs.lastKnownUpdatedAt)}"
-            )
+            val updated = FxCalculator.formatUpdatedAt(snap.prefs.lastKnownUpdatedAt)
+            val alertNote = when {
+                !snap.alertActive || snap.dayChangePct == null -> ""
+                else -> {
+                    val sign = if (snap.dayChangePct > 0) "+" else ""
+                    " · $sign${FxCalculator.format2(snap.dayChangePct)}%"
+                }
+            }
+            views.setTextViewText(R.id.widget_updated_text, "Actualizado: $updated$alertNote")
 
-            val openIntent = Intent(context, MainActivity::class.java)
-            val openPending = PendingIntent.getActivity(
-                context,
-                appWidgetId,
-                openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            views.setOnClickPendingIntent(
+                R.id.widget_root,
+                Widgets.openAppPending(context, appWidgetId)
             )
-            views.setOnClickPendingIntent(R.id.widget_root, openPending)
 
             val refreshIntent = Intent(context, RateWidgetProvider::class.java).apply {
                 action = ACTION_REFRESH

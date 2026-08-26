@@ -136,7 +136,7 @@ fun BcvAquiNavHost() {
                                             style = MaterialTheme.typography.titleLarge
                                         )
                                         Text(
-                                            text = "Tasas BCV, paralelo y P2P",
+                                            text = "Tasas BCV y spread P2P",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
                                         )

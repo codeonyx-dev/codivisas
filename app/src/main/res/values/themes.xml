@@ -7,6 +7,7 @@
     <style name="Theme.BcvAqui.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/bcv_blue</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/bcv_blue_dark</item>
         <item name="postSplashScreenTheme">@style/Theme.BcvAqui</item>
         <item name="android:forceDarkAllowed">false</item>
     </style>

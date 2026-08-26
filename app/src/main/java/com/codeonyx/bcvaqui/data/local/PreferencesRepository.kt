@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.codeonyx.bcvaqui.data.ApiConfig
 import com.codeonyx.bcvaqui.data.model.CurrencyRate
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.model.WhereDestination
@@ -18,6 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "bcv_aqui_prefs")
 
@@ -31,7 +35,15 @@ data class UserPreferences(
     val lastKnownUpdatedAt: String? = null,
     val lastKnownUsdRate: Double? = null,
     val lastKnownSelectedCurrencyRate: Double? = null,
-    val lastFetchEpochMs: Long = 0L
+    val lastFetchEpochMs: Long = 0L,
+    val lastKnownBinanceUsdtVes: Double? = null,
+    /** Tasa de la moneda seleccionada al cierre del día anterior (para variación). */
+    val previousDaySelectedRate: Double? = null,
+    val variationSnapshotDate: String? = null,
+    val variationTodayRate: Double? = null,
+    /** Umbral % para borde de alerta en widgets (0 = desactivado). */
+    val alertThresholdPercent: Double = 1.0,
+    val widgetConvertAmount: Double = 100.0
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -48,6 +60,12 @@ class PreferencesRepository(private val context: Context) {
         val LAST_USD_RATE = doublePreferencesKey("last_usd_rate")
         val LAST_SELECTED_CURRENCY_RATE = doublePreferencesKey("last_selected_currency_rate")
         val LAST_FETCH_EPOCH = longPreferencesKey("last_fetch_epoch_ms")
+        val LAST_BINANCE = doublePreferencesKey("last_binance_usdt_ves")
+        val PREVIOUS_DAY_RATE = doublePreferencesKey("previous_day_selected_rate")
+        val VARIATION_DATE = stringPreferencesKey("variation_snapshot_date")
+        val VARIATION_TODAY = doublePreferencesKey("variation_today_rate")
+        val ALERT_THRESHOLD = doublePreferencesKey("alert_threshold_percent")
+        val WIDGET_CONVERT_AMOUNT = doublePreferencesKey("widget_convert_amount")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -68,7 +86,13 @@ class PreferencesRepository(private val context: Context) {
             lastKnownUpdatedAt = prefs[Keys.LAST_UPDATED_AT],
             lastKnownUsdRate = prefs[Keys.LAST_USD_RATE],
             lastKnownSelectedCurrencyRate = prefs[Keys.LAST_SELECTED_CURRENCY_RATE],
-            lastFetchEpochMs = prefs[Keys.LAST_FETCH_EPOCH] ?: 0L
+            lastFetchEpochMs = prefs[Keys.LAST_FETCH_EPOCH] ?: 0L,
+            lastKnownBinanceUsdtVes = prefs[Keys.LAST_BINANCE],
+            previousDaySelectedRate = prefs[Keys.PREVIOUS_DAY_RATE],
+            variationSnapshotDate = prefs[Keys.VARIATION_DATE],
+            variationTodayRate = prefs[Keys.VARIATION_TODAY],
+            alertThresholdPercent = prefs[Keys.ALERT_THRESHOLD] ?: 1.0,
+            widgetConvertAmount = prefs[Keys.WIDGET_CONVERT_AMOUNT] ?: 100.0
         )
     }
 
@@ -82,6 +106,23 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setShowBinanceRate(enabled: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_BINANCE] = enabled }
+    }
+
+    suspend fun setAlertThresholdPercent(percent: Double) {
+        context.dataStore.edit { it[Keys.ALERT_THRESHOLD] = percent }
+    }
+
+    suspend fun setWidgetConvertAmount(amount: Double) {
+        context.dataStore.edit { it[Keys.WIDGET_CONVERT_AMOUNT] = amount }
+    }
+
+    suspend fun cycleWidgetConvertAmount(): Double {
+        val current = preferences.first().widgetConvertAmount
+        val presets = ApiConfig.WIDGET_CONVERT_PRESETS
+        val idx = presets.indexOfFirst { kotlin.math.abs(it - current) < 0.01 }
+        val next = presets[(idx + 1).coerceAtLeast(0) % presets.size]
+        setWidgetConvertAmount(next)
+        return next
     }
 
     suspend fun setDondeCurrencies(codes: List<String>) {
@@ -111,16 +152,28 @@ class PreferencesRepository(private val context: Context) {
         rates: Map<String, CurrencyRate>,
         updatedAt: String?,
         usdRate: Double?,
-        selectedCurrency: String
+        selectedCurrency: String,
+        binanceUsdtVes: Double? = null
     ) {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val selectedRate = rates[selectedCurrency]?.rateToVes
         context.dataStore.edit { prefs ->
             prefs[Keys.LAST_RATES_JSON] = json.encodeToString(rates.values.toList())
             updatedAt?.let { prefs[Keys.LAST_UPDATED_AT] = it }
             usdRate?.let { prefs[Keys.LAST_USD_RATE] = it }
-            rates[selectedCurrency]?.rateToVes?.let {
-                prefs[Keys.LAST_SELECTED_CURRENCY_RATE] = it
-            }
+            selectedRate?.let { prefs[Keys.LAST_SELECTED_CURRENCY_RATE] = it }
             prefs[Keys.LAST_FETCH_EPOCH] = System.currentTimeMillis()
+            binanceUsdtVes?.let { prefs[Keys.LAST_BINANCE] = it }
+
+            if (selectedRate != null) {
+                val storedDate = prefs[Keys.VARIATION_DATE]
+                val storedToday = prefs[Keys.VARIATION_TODAY]
+                if (storedDate != null && storedDate != today && storedToday != null) {
+                    prefs[Keys.PREVIOUS_DAY_RATE] = storedToday
+                }
+                prefs[Keys.VARIATION_DATE] = today
+                prefs[Keys.VARIATION_TODAY] = selectedRate
+            }
         }
     }
 

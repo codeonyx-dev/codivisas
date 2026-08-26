@@ -10,7 +10,12 @@ import java.util.Locale
 import java.util.TimeZone
 
 object FxCalculator {
-    private val twoDecimalFormat = DecimalFormat("0.00", DecimalFormatSymbols(Locale.US))
+    /** Formato venezolano: miles con punto y decimales con coma (ej. 1.000,93). */
+    private val veSymbols = DecimalFormatSymbols(Locale("es", "VE")).apply {
+        groupingSeparator = '.'
+        decimalSeparator = ','
+    }
+    private val displayFormat = DecimalFormat("#,##0.00", veSymbols)
 
     fun round2(value: Double): Double =
         BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).toDouble()
@@ -18,16 +23,9 @@ object FxCalculator {
     fun round4(value: Double): Double =
         BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP).toDouble()
 
-    fun format2(value: Double): String = twoDecimalFormat.format(round2(value))
+    fun format2(value: Double): String = displayFormat.format(round2(value))
 
-    fun formatAmount(value: Double): String {
-        val symbols = DecimalFormatSymbols(Locale.US)
-        return if (value >= 1000) {
-            DecimalFormat("#,##0.00", symbols).format(round2(value))
-        } else {
-            format2(value)
-        }
-    }
+    fun formatAmount(value: Double): String = format2(value)
 
     fun convert(
         amount: Double,

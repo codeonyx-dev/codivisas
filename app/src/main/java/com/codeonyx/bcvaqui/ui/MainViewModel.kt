@@ -9,7 +9,7 @@ import com.codeonyx.bcvaqui.data.model.BcvRateResponse
 import com.codeonyx.bcvaqui.data.model.FxDashboard
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.repository.FxRepository
-import com.codeonyx.bcvaqui.widget.RateWidgetProvider
+import com.codeonyx.bcvaqui.widget.Widgets
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.refreshDashboard(forceNetwork).fold(
                 onSuccess = { dashboard ->
                     _dashboard.value = dashboard
-                    RateWidgetProvider.updateAllWidgets(getApplication())
+                    Widgets.updateAll(getApplication())
                 },
                 onFailure = {
                     repository.refreshDashboard(forceNetwork = false).onSuccess { cached ->
@@ -76,7 +76,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedCurrency(code: String) {
         viewModelScope.launch {
             preferencesRepository.setSelectedCurrency(code)
-            RateWidgetProvider.updateAllWidgets(getApplication())
+            Widgets.updateAll(getApplication())
         }
     }
 
@@ -91,6 +91,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             preferencesRepository.setShowBinanceRate(enabled)
             refresh(forceNetwork = true)
+        }
+    }
+
+    fun setAlertThresholdPercent(percent: Double) {
+        viewModelScope.launch {
+            preferencesRepository.setAlertThresholdPercent(percent)
+            Widgets.updateAll(getApplication())
         }
     }
 

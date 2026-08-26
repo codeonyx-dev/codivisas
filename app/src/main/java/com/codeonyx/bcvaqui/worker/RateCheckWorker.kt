@@ -6,7 +6,7 @@ import androidx.work.WorkerParameters
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.repository.FxRepository
 import com.codeonyx.bcvaqui.notification.NotificationHelper
-import com.codeonyx.bcvaqui.widget.RateWidgetProvider
+import com.codeonyx.bcvaqui.widget.Widgets
 import kotlinx.coroutines.flow.first
 
 class RateCheckWorker(
@@ -34,7 +34,7 @@ class RateCheckWorker(
                     )
                 }
 
-                RateWidgetProvider.updateAllWidgets(applicationContext)
+                Widgets.updateAll(applicationContext)
                 Result.success()
             },
             onFailure = {

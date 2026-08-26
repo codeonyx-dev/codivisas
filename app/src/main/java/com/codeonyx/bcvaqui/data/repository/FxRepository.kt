@@ -30,9 +30,7 @@ class FxRepository(
             coroutineScope {
                 val bcvDeferred = async { fetchBcvRatesWithRetry() }
                 val worldDeferred = async { fetchWorldRatesSafe() }
-                val binanceDeferred = async {
-                    if (prefs.showBinanceRate) fetchBinanceUsdtVes() else BinanceFetchResult(null, null)
-                }
+                val binanceDeferred = async { fetchBinanceUsdtVes() }
 
                 val bcvResult = bcvDeferred.await()
                 val world = worldDeferred.await()
@@ -44,7 +42,8 @@ class FxRepository(
                     rates = bcvRates,
                     updatedAt = bcvUpdatedAt,
                     usdRate = bcvRates["USD"]?.rateToVes,
-                    selectedCurrency = prefs.selectedCurrency
+                    selectedCurrency = prefs.selectedCurrency,
+                    binanceUsdtVes = binance.rate
                 )
 
                 FxDashboard(
@@ -157,6 +156,7 @@ class FxRepository(
         return FxDashboard(
             bcvRates = cachedRates,
             bcvUpdatedAt = prefs.lastKnownUpdatedAt,
+            binanceUsdtVes = prefs.lastKnownBinanceUsdtVes,
             isFromCache = true,
             errorMessage = errorMessage ?: "Sin conexión — mostrando última tasa guardada"
         )
