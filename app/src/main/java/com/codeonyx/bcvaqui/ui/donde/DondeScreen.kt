@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -70,6 +70,7 @@ import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.data.model.WhereDestination
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.ui.MainViewModel
+import com.codeonyx.bcvaqui.ui.tools.ToolChoiceFlow
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
 import java.util.Locale
@@ -179,16 +180,15 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        baseOptions.forEach { dest ->
+                    ToolChoiceFlow(maxItemsInEachRow = 2) {
+                        val orderedBaseOptions = listOfNotNull(
+                            baseOptions.firstOrNull { it.code == sourceCurrency }
+                        ) + baseOptions.filterNot { it.code == sourceCurrency }
+                        orderedBaseOptions.distinctBy { it.code }.forEach { dest ->
                             CompactBaseChip(
                                 dest = dest,
                                 selected = dest.code == sourceCurrency,
+                                modifier = Modifier.widthIn(min = 132.dp),
                                 onClick = { switchBaseTo(dest.code) }
                             )
                         }
@@ -410,13 +410,14 @@ private fun FlagBadge(flag: String, size: Dp) {
 private fun CompactBaseChip(
     dest: WhereDestination,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val borderColor = if (selected) BcvBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
     val bg = if (selected) BcvBlue.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .height(40.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(bg)
@@ -514,12 +515,8 @@ private fun ResultRow(
         onClick = onClick,
         enabled = !isBase,
         shape = RoundedCornerShape(16.dp),
-        color = if (isBase) BcvBlue.copy(alpha = 0.08f) else Color.White,
-        shadowElevation = if (isBase) 0.dp else 1.dp,
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isBase) BcvBlue.copy(alpha = 0.45f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-        ),
+        color = if (isBase) Color(0xFFE8EEF8) else Color.White,
+        shadowElevation = if (isBase) 0.dp else 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
