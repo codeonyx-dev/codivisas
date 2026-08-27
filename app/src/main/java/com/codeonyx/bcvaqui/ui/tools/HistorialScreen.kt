@@ -2,7 +2,6 @@ package com.codeonyx.bcvaqui.ui.tools
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -72,21 +70,14 @@ fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
 
         ToolPanel {
             Text("Período", fontWeight = FontWeight.SemiBold)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            ToolChoiceFlow(maxItemsInEachRow = 3) {
                 listOf(7, 30, 90).forEach { d ->
                     FilterChip(
                         selected = days == d,
                         onClick = { days = d },
+                        modifier = Modifier.widthIn(min = 88.dp),
                         label = { Text("$d días", fontWeight = if (days == d) FontWeight.Bold else FontWeight.Medium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
-                            selectedLabelColor = BcvBlue
-                        )
+                        colors = toolChipColors()
                     )
                 }
             }

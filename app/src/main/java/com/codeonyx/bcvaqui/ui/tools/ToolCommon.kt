@@ -1,12 +1,14 @@
 package com.codeonyx.bcvaqui.ui.tools
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -33,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,11 +67,44 @@ fun ToolScaffold(
 
 @Composable
 fun ToolIntro(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = BcvBlue.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, BcvBlue.copy(alpha = 0.14f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = BcvBlue.copy(alpha = 0.14f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = BcvBlue,
+                    modifier = Modifier.padding(7.dp).size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = "¿Qué hace esta herramienta?",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = BcvBlue
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -99,12 +137,14 @@ fun ToolResultCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .animateContentSize(),
         shape = RoundedCornerShape(20.dp),
         color = Color.White,
-        shadowElevation = 2.dp
+        shadowElevation = 2.dp,
+        tonalElevation = 0.dp
     ) {
-        Box {
+        Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -115,7 +155,7 @@ fun ToolResultCard(
                         )
                     )
             )
-            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 16.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,6 +190,40 @@ fun ToolResultCard(
         }
     }
 }
+
+@Composable
+fun ToolEmptyResult(
+    title: String,
+    hint: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White,
+        shadowElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                hint,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun toolChipColors() = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
+    selectedLabelColor = BcvBlue
+)
 
 @Composable
 fun ChangeBadge(changePercent: Double) {
@@ -198,13 +272,14 @@ fun ToolNumberField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    suffix: String? = null
+    suffix: String? = null,
+    helper: String? = null
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = { raw ->
             onValueChange(
-                raw.filter { it.isDigit() || it == '.' }.let { cleaned ->
+                raw.replace(',', '.').filter { it.isDigit() || it == '.' }.let { cleaned ->
                     val parts = cleaned.split('.')
                     if (parts.size <= 1) cleaned
                     else parts.first() + "." + parts.drop(1).joinToString("").take(4)
@@ -213,6 +288,7 @@ fun ToolNumberField(
         },
         label = { Text(label) },
         suffix = suffix?.let { { Text(it) } },
+        supportingText = helper?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
@@ -226,22 +302,42 @@ fun ToolNumberField(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ToolChoiceFlow(
+    maxItemsInEachRow: Int = 3,
+    content: @Composable () -> Unit
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = maxItemsInEachRow
+    ) {
+        content()
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CurrencyChips(
     options: List<String>,
     selected: String,
     onSelect: (String) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    val orderedOptions = listOf(selected) + options.filterNot { it == selected }
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = 3
     ) {
-        options.forEach { code ->
+        orderedOptions.distinct().forEach { code ->
             FilterChip(
                 selected = code == selected,
                 onClick = { onSelect(code) },
+                modifier = Modifier.widthIn(min = 96.dp),
                 label = {
                     Text(
                         if (code == "VES") "Bs."
@@ -249,14 +345,11 @@ fun CurrencyChips(
                         fontWeight = if (code == selected) FontWeight.Bold else FontWeight.Medium
                     )
                 },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
-                    selectedLabelColor = BcvBlue
-                )
+                colors = toolChipColors()
             )
         }
     }
 }
 
 fun parseToolAmount(raw: String): Double =
-    raw.replace(",", "").toDoubleOrNull() ?: 0.0
+    raw.replace(',', '.').toDoubleOrNull() ?: 0.0

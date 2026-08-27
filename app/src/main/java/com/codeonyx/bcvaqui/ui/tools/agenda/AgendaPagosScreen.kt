@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -50,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,8 @@ import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.model.PaymentType
 import com.codeonyx.bcvaqui.data.model.VenezuelanBanks
 import com.codeonyx.bcvaqui.ui.MainViewModel
+import com.codeonyx.bcvaqui.ui.tools.ToolChoiceFlow
+import com.codeonyx.bcvaqui.ui.tools.toolChipColors
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
 import java.util.UUID
@@ -173,8 +177,8 @@ private fun PaymentCard(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
+        color = Color.White,
+        shadowElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -252,21 +256,27 @@ private fun PaymentEditorSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolChoiceFlow(maxItemsInEachRow = 3) {
                 FilterChip(
                     selected = type == PaymentType.PAGO_MOVIL,
                     onClick = { type = PaymentType.PAGO_MOVIL },
-                    label = { Text("Pago móvil") }
+                    modifier = Modifier.widthIn(min = 88.dp),
+                    label = { Text("Pago móvil") },
+                    colors = toolChipColors()
                 )
                 FilterChip(
                     selected = type == PaymentType.CUENTA_VE,
                     onClick = { type = PaymentType.CUENTA_VE },
-                    label = { Text("Cuenta VE") }
+                    modifier = Modifier.widthIn(min = 88.dp),
+                    label = { Text("Cuenta VE") },
+                    colors = toolChipColors()
                 )
                 FilterChip(
                     selected = type == PaymentType.CUENTA_EXTRANJERA,
                     onClick = { type = PaymentType.CUENTA_EXTRANJERA },
-                    label = { Text("Extranjera") }
+                    modifier = Modifier.widthIn(min = 88.dp),
+                    label = { Text("Extranjera") },
+                    colors = toolChipColors()
                 )
             }
 

@@ -48,14 +48,10 @@ import com.codeonyx.bcvaqui.ui.home.HomeScreen
 import com.codeonyx.bcvaqui.ui.settings.SettingsScreen
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
-import com.codeonyx.bcvaqui.ui.tools.AlcanzaScreen
-import com.codeonyx.bcvaqui.ui.tools.ArbitrageCalculatorScreen
 import com.codeonyx.bcvaqui.ui.tools.ComisionScreen
 import com.codeonyx.bcvaqui.ui.tools.CompartirToolScreen
 import com.codeonyx.bcvaqui.ui.tools.DividirScreen
 import com.codeonyx.bcvaqui.ui.tools.HistorialScreen
-import com.codeonyx.bcvaqui.ui.tools.MetaScreen
-import com.codeonyx.bcvaqui.ui.tools.ParallelComparatorScreen
 import com.codeonyx.bcvaqui.ui.tools.ToolRoutes
 import com.codeonyx.bcvaqui.ui.tools.ToolsHubScreen
 import com.codeonyx.bcvaqui.ui.tools.VariacionScreen
@@ -245,16 +241,12 @@ fun BcvAquiNavHost() {
                             ToolsHubScreen(onOpenTool = { navController.navigate(it) })
                         }
                         toolComposable(ToolRoutes.DONDE) { DondeScreen(viewModel) }
-                        toolComposable(ToolRoutes.ALCANZA) { AlcanzaScreen(viewModel) }
                         toolComposable(ToolRoutes.COMISION) { ComisionScreen() }
                         toolComposable(ToolRoutes.VARIACION) { VariacionScreen(viewModel) }
                         toolComposable(ToolRoutes.HISTORIAL) { HistorialScreen(viewModel) }
-                        toolComposable(ToolRoutes.META) { MetaScreen(viewModel) }
                         toolComposable(ToolRoutes.DIVIDIR) { DividirScreen(viewModel) }
                         toolComposable(ToolRoutes.COMPARTIR) { CompartirToolScreen(viewModel) }
                         toolComposable(ToolRoutes.AGENDA) { AgendaPagosScreen(viewModel) }
-                        toolComposable(ToolRoutes.PARALELO) { ParallelComparatorScreen(viewModel) }
-                        toolComposable(ToolRoutes.ARBITRAJE) { ArbitrageCalculatorScreen() }
                     }
                     composable(AppRoute.Settings.route) {
                         SettingsScreen(
