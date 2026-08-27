@@ -1,6 +1,6 @@
 # SpreadVE
 
-App Android 100% nativa (Kotlin + Jetpack Compose) que muestra las tasas oficiales del Banco Central de Venezuela (BCV), las compara con Binance P2P USDT/VES y calcula el spread, e incluye convertidor, widgets, notificaciones y calculadora de arbitraje.
+App Android 100% nativa (Kotlin + Jetpack Compose) que muestra las tasas oficiales del Banco Central de Venezuela (BCV) y Binance P2P USDT/VES, e incluye convertidor, widgets, notificaciones y utilidades de pago.
 
 ## Requisitos
 
@@ -53,15 +53,6 @@ Los intervalos de notificación se configuran desde **Ajustes** en la app (1, 2,
 - Convertidor entre monedas BCV y VES
 - Mensaje amigable sin internet + última tasa en caché
 
-### Dashboard multi-fuente
-- BCV oficial vs Binance P2P
-- Comparador con tasa paralela ingresada manualmente
-- Diferencia porcentual frente al BCV
-
-### Calculadora de arbitraje
-- Compra en un mercado, vende en otro
-- Comisiones, ganancia neta en VES y retorno porcentual
-
 ### Widget
 - Muestra la moneda preferida (`USD: 785.07 VES`)
 - Se actualiza cada ~30 min y al abrir la app
@@ -82,7 +73,7 @@ app/src/main/java/com/codeonyx/bcvaqui/
 │   ├── model/                # DTOs y modelos
 │   ├── local/                # DataStore
 │   └── repository/           # Capa de datos
-├── domain/FxCalculator.kt    # Conversión y arbitraje
+├── domain/FxCalculator.kt    # Conversión y cálculos
 ├── ui/                       # Compose screens
 ├── widget/                   # Home screen widget
 ├── worker/                   # WorkManager
