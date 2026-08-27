@@ -1,6 +1,6 @@
 {
-  "versionCode": 4,
-  "versionName": "1.1.2",
-  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.1.2/SpreadVE.apk",
-  "releaseNotes": "Actualizaciones más fiables: descarga automática solo en Wi‑Fi; con datos móviles pide confirmación."
+  "versionCode": 5,
+  "versionName": "1.2.0",
+  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.2.0/SpreadVE.apk",
+  "releaseNotes": "Herramientas rediseñadas y más claras; USDT de Binance siempre disponible en el selector; tarjetas y chips de resultado corregidos."
 }
