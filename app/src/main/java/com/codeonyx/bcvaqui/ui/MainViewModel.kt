@@ -9,7 +9,6 @@ import com.codeonyx.bcvaqui.data.model.BcvRateResponse
 import com.codeonyx.bcvaqui.data.model.FxDashboard
 import com.codeonyx.bcvaqui.data.model.PaymentContact
 import com.codeonyx.bcvaqui.data.repository.FxRepository
-import com.codeonyx.bcvaqui.domain.RateSources
 import com.codeonyx.bcvaqui.widget.Widgets
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -77,10 +76,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedCurrency(code: String) {
         viewModelScope.launch {
             preferencesRepository.setSelectedCurrency(code)
-            if (code == RateSources.BINANCE_USDT && !preferences.value.showBinanceRate) {
-                preferencesRepository.setShowBinanceRate(true)
-                refresh(forceNetwork = true)
-            }
             Widgets.updateAll(getApplication())
         }
     }
@@ -89,16 +84,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             preferencesRepository.setNotificationIntervalHours(hours)
             com.codeonyx.bcvaqui.worker.WorkScheduler.schedulePeriodicRateCheck(getApplication())
-        }
-    }
-
-    fun setShowBinanceRate(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.setShowBinanceRate(enabled)
-            if (!enabled && preferences.value.selectedCurrency == RateSources.BINANCE_USDT) {
-                preferencesRepository.setSelectedCurrency("USD")
-            }
-            refresh(forceNetwork = true)
         }
     }
 

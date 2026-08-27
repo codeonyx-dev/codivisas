@@ -31,7 +31,6 @@ data class UserPreferences(
     val notificationIntervalHours: Int = 0,
     val dondeCurrencies: List<String> = WhereDestination.DEFAULT_CODES,
     val paymentContacts: List<PaymentContact> = emptyList(),
-    val showBinanceRate: Boolean = false,
     val lastKnownRatesJson: String? = null,
     val lastKnownUpdatedAt: String? = null,
     val lastKnownUsdRate: Double? = null,
@@ -57,7 +56,6 @@ class PreferencesRepository(private val context: Context) {
         val NOTIFICATION_INTERVAL = intPreferencesKey("notification_interval_hours")
         val DONDE_CURRENCIES = stringPreferencesKey("donde_currencies")
         val PAYMENT_CONTACTS = stringPreferencesKey("payment_contacts_json")
-        val SHOW_BINANCE = booleanPreferencesKey("show_binance_rate")
         val LAST_RATES_JSON = stringPreferencesKey("last_rates_json")
         val LAST_UPDATED_AT = stringPreferencesKey("last_updated_at")
         val LAST_USD_RATE = doublePreferencesKey("last_usd_rate")
@@ -85,7 +83,6 @@ class PreferencesRepository(private val context: Context) {
             notificationIntervalHours = prefs[Keys.NOTIFICATION_INTERVAL] ?: 0,
             dondeCurrencies = donde,
             paymentContacts = decodePaymentContacts(prefs[Keys.PAYMENT_CONTACTS]),
-            showBinanceRate = prefs[Keys.SHOW_BINANCE] ?: false,
             lastKnownRatesJson = prefs[Keys.LAST_RATES_JSON],
             lastKnownUpdatedAt = prefs[Keys.LAST_UPDATED_AT],
             lastKnownUsdRate = prefs[Keys.LAST_USD_RATE],
@@ -107,10 +104,6 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setNotificationIntervalHours(hours: Int) {
         context.dataStore.edit { it[Keys.NOTIFICATION_INTERVAL] = hours }
-    }
-
-    suspend fun setShowBinanceRate(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SHOW_BINANCE] = enabled }
     }
 
     suspend fun setHasSeenOnboarding(seen: Boolean) {

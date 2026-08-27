@@ -37,7 +37,7 @@ class SpreadWidgetProvider : AppWidgetProvider() {
             val prefs = snap.prefs
             val bcv = prefs.lastKnownUsdRate
                 ?: snap.rate.takeIf { snap.currency == "USD" }
-            val p2p = prefs.lastKnownBinanceUsdtVes.takeIf { prefs.showBinanceRate }
+            val p2p = prefs.lastKnownBinanceUsdtVes
 
             val spreadPct = if (bcv != null && p2p != null && bcv > 0) {
                 FxCalculator.round2((p2p - bcv) / bcv * 100.0)
@@ -62,7 +62,6 @@ class SpreadWidgetProvider : AppWidgetProvider() {
             )
 
             val footer = when {
-                !prefs.showBinanceRate -> "P2P desactivado en Ajustes"
                 p2p == null -> "P2P no disponible · abre la app para actualizar"
                 spreadPct != null -> "P2P USDT/VES · Binance"
                 else -> "USD · referencia de mercado"
