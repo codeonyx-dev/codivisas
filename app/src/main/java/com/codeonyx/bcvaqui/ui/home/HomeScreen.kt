@@ -4,13 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -329,89 +324,6 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                                 currencyMenuExpanded = false
                             }
                         )
-                    }
-                }
-            }
-
-            if (preferences.showBinanceRate || selectedCurrency == RateSources.BINANCE_USDT) {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            AnimatedVisibility(
-                visible = preferences.showBinanceRate || selectedCurrency == RateSources.BINANCE_USDT,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                val binance = dashboard?.binanceUsdtVes ?: preferences.lastKnownBinanceUsdtVes
-                val bcvUsd = rates["USD"]?.rateToVes
-                val diffPct = if (binance != null && bcvUsd != null && bcvUsd > 0) {
-                    FxCalculator.round2((binance - bcvUsd) / bcvUsd * 100.0)
-                } else null
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = binance != null) {
-                            viewModel.setSelectedCurrency(RateSources.BINANCE_USDT)
-                        },
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF0B90B).copy(
-                        alpha = if (selectedCurrency == RateSources.BINANCE_USDT) 0.28f else 0.18f
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        Color(0xFFF0B90B).copy(
-                            alpha = if (selectedCurrency == RateSources.BINANCE_USDT) 0.75f else 0.45f
-                        )
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "BINANCE P2P · USDT",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.75f),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = when {
-                                    binance != null -> "${FxCalculator.format2(binance)} Bs."
-                                    !dashboard?.binanceError.isNullOrBlank() -> dashboard?.binanceError ?: "Error"
-                                    isLoading -> "Cargando…"
-                                    else -> "No disponible"
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            if (diffPct != null) {
-                                val sign = if (diffPct > 0) "+" else ""
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White.copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = "$sign${FxCalculator.format2(diffPct)}% vs BCV",
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = BcvGold,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            TextButton(
-                                onClick = { viewModel.setShowBinanceRate(false) }
-                            ) {
-                                Text(
-                                    "Desactivar",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                        }
                     }
                 }
             }

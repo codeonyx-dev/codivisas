@@ -32,16 +32,11 @@ class FxRepository(
             coroutineScope {
                 val bcvDeferred = async { fetchBcvRatesWithRetry() }
                 val worldDeferred = async { fetchWorldRatesSafe() }
-                val binanceDeferred = if (prefs.showBinanceRate) {
-                    async { fetchBinanceUsdtVes() }
-                } else {
-                    null
-                }
+                val binanceDeferred = async { fetchBinanceUsdtVes() }
 
                 val bcvResult = bcvDeferred.await()
                 val world = worldDeferred.await()
-                val binance = binanceDeferred?.await()
-                    ?: BinanceFetchResult(prefs.lastKnownBinanceUsdtVes, null)
+                val binance = binanceDeferred.await()
                 val bcvRates = bcvResult.rates
                 val bcvUpdatedAt = bcvResult.updatedAt
 
