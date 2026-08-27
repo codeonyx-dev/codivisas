@@ -51,9 +51,15 @@ El APK queda en `app/build/outputs/apk/release/app-release.apk`.
 
 ## 5. Crear release en GitHub
 
+Copia el APK con el nombre público antes de subir (el `#nombre` de `gh` solo pone la etiqueta, no el nombre de descarga):
+
 ```bash
-gh release create v1.2.0 app/build/outputs/apk/release/app-release.apk#SpreadVE.apk --title "SpreadVE 1.2.0" --notes "Notas del release"
+cp app/build/outputs/apk/release/app-release.apk SpreadVE.apk
+gh release create v1.2.0 SpreadVE.apk --title "SpreadVE 1.2.0" --notes "Notas del release"
 ```
+
+En `update.json`, `apkUrl` debe coincidir exactamente con el asset subido, por ejemplo:
+`https://github.com/codeonyx-dev/spread-ve/releases/download/v1.2.0/SpreadVE.apk`
 
 ## Notas
 

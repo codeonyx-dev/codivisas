@@ -171,11 +171,46 @@ object AppUpdateManager {
         val pendingId = prefs(appContext).getLong(KEY_PENDING_DOWNLOAD_ID, -1L)
         if (pendingId != downloadId) return
 
+        val manager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val query = DownloadManager.Query().setFilterById(downloadId)
+        manager.query(query).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                clearPendingDownload(appContext)
+                return
+            }
+            val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+            if (status != DownloadManager.STATUS_SUCCESSFUL) {
+                clearPendingDownload(appContext)
+                NotificationManagerCompat.from(appContext).cancel(UPDATE_NOTIFICATION_ID)
+                showDownloadFailedNotification(appContext)
+                return
+            }
+        }
+
         val apkPath = prefs(appContext).getString(KEY_PENDING_APK_FILE, null)
         clearPendingDownload(appContext)
         NotificationManagerCompat.from(appContext).cancel(UPDATE_NOTIFICATION_ID)
         showInstallReadyNotification(appContext, downloadId)
         promptInstall(appContext, downloadId, apkPath)
+    }
+
+    private fun showDownloadFailedNotification(context: Context) {
+        val openIntent = Intent(context, MainActivity::class.java)
+        val openPending = PendingIntent.getActivity(
+            context,
+            INSTALL_READY_NOTIFICATION_ID + 1,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, BcvAquiApp.CHANNEL_APP_UPDATES)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("No se pudo descargar la actualización")
+            .setContentText("Abre SpreadVE e intenta de nuevo desde Ajustes.")
+            .setContentIntent(openPending)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        NotificationManagerCompat.from(context).notify(INSTALL_READY_NOTIFICATION_ID, notification)
     }
 
     private fun showInstallReadyNotification(context: Context, downloadId: Long) {
