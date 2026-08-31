@@ -84,6 +84,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             preferencesRepository.setNotificationIntervalHours(hours)
             com.codeonyx.bcvaqui.worker.WorkScheduler.schedulePeriodicRateCheck(getApplication())
+            if (hours > 0) {
+                com.codeonyx.bcvaqui.worker.WorkScheduler.enqueueImmediateRateCheck(getApplication())
+            }
         }
     }
 

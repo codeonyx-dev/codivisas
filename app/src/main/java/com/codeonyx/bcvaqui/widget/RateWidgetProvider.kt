@@ -7,15 +7,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
-import androidx.work.Constraints
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.codeonyx.bcvaqui.R
 import com.codeonyx.bcvaqui.domain.FxCalculator
-import com.codeonyx.bcvaqui.worker.WidgetRefreshWorker
+import com.codeonyx.bcvaqui.worker.WorkScheduler
 
 class RateWidgetProvider : AppWidgetProvider() {
+
+    override fun onEnabled(context: Context) {
+        WorkScheduler.onWidgetAdded(context)
+    }
 
     override fun onUpdate(
         context: Context,
@@ -34,13 +34,7 @@ class RateWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val request = OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
-                .setConstraints(constraints)
-                .build()
-            WorkManager.getInstance(context).enqueue(request)
+            WorkScheduler.enqueueImmediateRefresh(context)
         }
     }
 

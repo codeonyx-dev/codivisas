@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
@@ -104,6 +105,7 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
     var currencyMenuExpanded by remember { mutableStateOf(false) }
     var copyMenuExpanded by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
+    var showCalculator by remember { mutableStateOf(false) }
 
     val amount = amountInput.toDoubleOrNull() ?: 0.0
     val result = if (convertToVes) {
@@ -202,15 +204,20 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                         color = Color.White.copy(alpha = 0.9f)
                     )
                 }
-                IconButton(onClick = { viewModel.refresh(forceNetwork = true) }, enabled = !isLoading) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = Color.White)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showCalculator = true }) {
+                        Icon(Icons.Default.Calculate, contentDescription = "Calculadora", tint = Color.White)
+                    }
+                    IconButton(onClick = { viewModel.refresh(forceNetwork = true) }, enabled = !isLoading) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = Color.White)
+                        }
                     }
                 }
             }
@@ -589,6 +596,14 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     paymentText = contact?.formatForCopy()
                 )
             }
+        )
+    }
+
+    if (showCalculator) {
+        val usdBcvRate = rates["USD"]?.rateToVes ?: selectedRate
+        MiniCalculatorSheet(
+            usdRate = usdBcvRate,
+            onDismiss = { showCalculator = false }
         )
     }
 

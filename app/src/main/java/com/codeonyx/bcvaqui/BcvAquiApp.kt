@@ -10,8 +10,8 @@ class BcvAquiApp : Application() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
-        WorkScheduler.schedulePeriodicRateCheck(this)
-        WorkScheduler.scheduleUpdateCheck(this)
+        WorkScheduler.scheduleAllBackgroundWork(this)
+        WorkScheduler.enqueueImmediateRefresh(this)
     }
 
     private fun createNotificationChannels() {

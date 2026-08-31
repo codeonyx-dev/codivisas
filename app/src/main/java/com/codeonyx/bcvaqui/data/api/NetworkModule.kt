@@ -40,6 +40,7 @@ object NetworkModule {
                     chain.request().newBuilder()
                         .header("User-Agent", "SpreadVE/1.0 Android")
                         .header("Accept", "application/json")
+                        .header("Cache-Control", "no-cache")
                         .build()
                 )
             }

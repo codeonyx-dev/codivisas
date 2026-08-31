@@ -5,7 +5,9 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -46,8 +48,53 @@ class WidgetRefreshWorker(
 object WorkScheduler {
     private const val RATE_CHECK_WORK = "rate_check_work"
     private const val WIDGET_REFRESH_WORK = "widget_refresh_work"
+    private const val IMMEDIATE_REFRESH_WORK = "immediate_widget_refresh"
     private const val UPDATE_CHECK_WORK = "update_check_work"
     private val schedulerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    fun scheduleAllBackgroundWork(context: Context) {
+        val appContext = context.applicationContext
+        scheduleWidgetRefresh(appContext)
+        schedulePeriodicRateCheck(appContext)
+        scheduleUpdateCheck(appContext)
+    }
+
+    fun enqueueImmediateRefresh(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+            IMMEDIATE_REFRESH_WORK,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    fun enqueueImmediateRateCheck(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = OneTimeWorkRequestBuilder<RateCheckWorker>()
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+            "immediate_rate_check",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    fun onWidgetAdded(context: Context) {
+        scheduleWidgetRefresh(context.applicationContext)
+        enqueueImmediateRefresh(context.applicationContext)
+    }
 
     fun schedulePeriodicRateCheck(context: Context) {
         val appContext = context.applicationContext
@@ -96,7 +143,7 @@ object WorkScheduler {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WIDGET_REFRESH_WORK,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
     }

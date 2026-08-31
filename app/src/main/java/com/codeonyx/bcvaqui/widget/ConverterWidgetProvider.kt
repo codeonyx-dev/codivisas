@@ -11,8 +11,13 @@ import com.codeonyx.bcvaqui.R
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.domain.FxCalculator
 import com.codeonyx.bcvaqui.domain.RateSources
+import com.codeonyx.bcvaqui.worker.WorkScheduler
 
 class ConverterWidgetProvider : AppWidgetProvider() {
+    override fun onEnabled(context: Context) {
+        WorkScheduler.onWidgetAdded(context)
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,

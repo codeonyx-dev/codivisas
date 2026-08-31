@@ -9,7 +9,6 @@ import androidx.lifecycle.lifecycleScope
 import com.codeonyx.bcvaqui.ui.BcvAquiNavHost
 import com.codeonyx.bcvaqui.ui.theme.BcvAquiTheme
 import com.codeonyx.bcvaqui.update.AppUpdateManager
-import com.codeonyx.bcvaqui.worker.WorkScheduler
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -17,7 +16,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        WorkScheduler.scheduleWidgetRefresh(this)
         AppUpdateManager.resumePendingInstall(this)
         lifecycleScope.launch {
             AppUpdateManager.checkForUpdate(this@MainActivity, notifyIfAvailable = true)

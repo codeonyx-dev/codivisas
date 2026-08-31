@@ -70,17 +70,7 @@ class FxRepository(
     /** Últimos [days] días del histórico BCV (más reciente al final). */
     suspend fun fetchHistory(days: Int = 30): Result<List<BcvRateResponse>> {
         return runCatching {
-            val cacheIsFresh = historyCache.isNotEmpty() &&
-                System.currentTimeMillis() - historyCacheAtMs < HISTORY_CACHE_TTL_MS
-            val all = if (cacheIsFresh) {
-                historyCache
-            } else {
-                NetworkModule.bcvTodayApi.getHistory().also {
-                    historyCache = it
-                    historyCacheAtMs = System.currentTimeMillis()
-                }
-            }
-            all.takeLast(days.coerceIn(7, 365))
+            loadHistoryEntries(forceNetwork = false).takeLast(days.coerceIn(7, 365))
         }
     }
 
@@ -88,8 +78,12 @@ class FxRepository(
         var lastError: Throwable? = null
         repeat(maxAttempts) { attempt ->
             runCatching {
-                val response = NetworkModule.bcvTodayApi.getRates()
-                return parseBcvResponse(response)
+                return coroutineScope {
+                    val rateDeferred = async { NetworkModule.bcvTodayApi.getRates() }
+                    val historyDeferred = async { fetchLatestHistoryEntry(forceNetwork = true) }
+                    val bestResponse = pickLatestBcvSnapshot(rateDeferred.await(), historyDeferred.await())
+                    parseBcvResponse(bestResponse)
+                }
             }.onFailure { lastError = it }
             if (attempt < maxAttempts - 1) {
                 kotlinx.coroutines.delay(1_000L * (attempt + 1))
@@ -97,6 +91,35 @@ class FxRepository(
         }
         throw lastError ?: IllegalStateException("Failed to fetch BCV rates")
     }
+
+    private suspend fun loadHistoryEntries(forceNetwork: Boolean): List<BcvRateResponse> {
+        val cacheIsFresh = !forceNetwork &&
+            historyCache.isNotEmpty() &&
+            System.currentTimeMillis() - historyCacheAtMs < HISTORY_CACHE_TTL_MS
+        if (cacheIsFresh) return historyCache
+
+        return runCatching {
+            NetworkModule.bcvTodayApi.getHistory().also {
+                historyCache = it
+                historyCacheAtMs = System.currentTimeMillis()
+            }
+        }.getOrElse { historyCache }
+    }
+
+    /** bcv.today/rate.json a veces queda atrasado; el histórico suele tener la tasa del día. */
+    private suspend fun fetchLatestHistoryEntry(forceNetwork: Boolean): BcvRateResponse? =
+        loadHistoryEntries(forceNetwork).lastOrNull()
+
+    private fun pickLatestBcvSnapshot(
+        current: BcvRateResponse,
+        fromHistory: BcvRateResponse?
+    ): BcvRateResponse {
+        if (fromHistory == null) return current
+        return if (bcvSortKey(fromHistory) >= bcvSortKey(current)) fromHistory else current
+    }
+
+    private fun bcvSortKey(response: BcvRateResponse): String =
+        response.effectiveDate ?: response.date ?: response.updatedAt?.take(10).orEmpty()
 
     private suspend fun fetchWorldRatesSafe(): WorldParsedResult {
         return runCatching {
@@ -156,8 +179,11 @@ class FxRepository(
             response.RUB?.let { put("RUB", CurrencyRate("RUB", FxCalculator.round2(it), response.updatedAt)) }
         }
         if (rates.isEmpty()) throw IllegalStateException("BCV API returned no rates")
-        return BcvParsedResult(rates, response.updatedAt)
+        return BcvParsedResult(rates, bcvDisplayTimestamp(response))
     }
+
+    private fun bcvDisplayTimestamp(response: BcvRateResponse): String? =
+        response.effectiveDate ?: response.date ?: response.updatedAt
 
     private fun buildDashboardFromCache(
         prefs: UserPreferences,
