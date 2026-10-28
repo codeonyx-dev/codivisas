@@ -1,5 +1,6 @@
 package com.codeonyx.bcvaqui.ui
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -31,6 +32,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,15 +51,21 @@ import com.codeonyx.bcvaqui.ui.settings.SettingsScreen
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
 import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
 import com.codeonyx.bcvaqui.ui.tools.ComisionScreen
-import com.codeonyx.bcvaqui.ui.tools.CompartirToolScreen
 import com.codeonyx.bcvaqui.ui.tools.DividirScreen
 import com.codeonyx.bcvaqui.ui.tools.HistorialScreen
 import com.codeonyx.bcvaqui.ui.tools.ToolRoutes
+import com.codeonyx.bcvaqui.ui.theme.BrandColors
+import com.codeonyx.bcvaqui.ui.tools.IvaIgtfScreen
+import com.codeonyx.bcvaqui.ui.tools.BrechaScreen
 import com.codeonyx.bcvaqui.ui.tools.ToolsHubScreen
-import com.codeonyx.bcvaqui.ui.tools.VariacionScreen
+import com.codeonyx.bcvaqui.ui.home.CalculatorPanel
 import com.codeonyx.bcvaqui.ui.tools.agenda.AgendaPagosScreen
 import com.codeonyx.bcvaqui.ui.tools.toolSubtitle
 import com.codeonyx.bcvaqui.ui.tools.toolTitle
+import com.codeonyx.bcvaqui.ui.tour.TourKeys
+import com.codeonyx.bcvaqui.ui.tour.tourTarget
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class AppRoute(
     val route: String,
@@ -83,6 +91,13 @@ fun BcvAquiNavHost() {
         currentDestination?.hierarchy?.any { d -> d.route == route.route } == true
     }
     val isHome = currentBottom == AppRoute.Home
+    val tourTargets = remember { androidx.compose.runtime.mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
+    val prefs by viewModel.preferences.collectAsStateWithLifecycle()
+    val tourRequested by viewModel.tourRequested.collectAsStateWithLifecycle()
+    val showTour = tourRequested || !prefs.hasSeenOnboarding
+    var tourFocus by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val lite = prefs.liteMode && !showTour
+    val visibleRoutes = if (lite) listOf(AppRoute.Home, AppRoute.Settings) else bottomRoutes
 
     val toolLeaf = currentDestination?.route?.takeIf {
         it != ToolRoutes.HUB && it != ToolRoutes.GRAPH && currentBottom == AppRoute.Tools
@@ -95,10 +110,14 @@ fun BcvAquiNavHost() {
         null -> "app"
     }
 
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.codeonyx.bcvaqui.ui.tour.LocalTourTargets provides tourTargets,
+        com.codeonyx.bcvaqui.ui.tour.LocalTourFocus provides tourFocus
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceLight)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -114,7 +133,7 @@ fun BcvAquiNavHost() {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Volver",
-                                    tint = MaterialTheme.colorScheme.onPrimary
+                                    tint = BrandColors.onTopBar
                                 )
                             }
                         }
@@ -129,14 +148,14 @@ fun BcvAquiNavHost() {
                                 key == "home" -> {
                                     Column {
                                         Text(
-                                            text = "SpreadVE",
+                                            text = "Codivisas",
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.titleLarge
                                         )
                                         Text(
-                                            text = "Tasas BCV y spread P2P",
+                                            text = "Tasas BCV y brecha P2P",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+                                            color = BrandColors.onTopBarMuted
                                         )
                                     }
                                 }
@@ -150,14 +169,14 @@ fun BcvAquiNavHost() {
                                 else -> {
                                     Column {
                                         Text(
-                                            text = toolTitle(toolLeaf),
+                                            text = stringResource(toolTitle(toolLeaf)),
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.titleLarge
                                         )
                                         Text(
-                                            text = toolSubtitle(toolLeaf),
+                                            text = stringResource(toolSubtitle(toolLeaf)),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+                                            color = BrandColors.onTopBarMuted
                                         )
                                     }
                                 }
@@ -165,8 +184,10 @@ fun BcvAquiNavHost() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = BcvBlue,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = BrandColors.topBar,
+                        titleContentColor = BrandColors.onTopBar,
+                        navigationIconContentColor = BrandColors.onTopBar,
+                        actionIconContentColor = BrandColors.onTopBar
                     )
                 )
             },
@@ -175,9 +196,14 @@ fun BcvAquiNavHost() {
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 8.dp
                 ) {
-                    bottomRoutes.forEach { route ->
+                    visibleRoutes.forEach { route ->
                         val selected = currentDestination?.hierarchy?.any { it.route == route.route } == true
                         NavigationBarItem(
+                            modifier = when (route) {
+                                AppRoute.Tools -> Modifier.tourTarget(TourKeys.NAV_TOOLS)
+                                AppRoute.Settings -> Modifier.tourTarget(TourKeys.NAV_SETTINGS)
+                                else -> Modifier
+                            },
                             selected = selected,
                             onClick = {
                                 navController.navigate(route.route) {
@@ -196,8 +222,8 @@ fun BcvAquiNavHost() {
                             },
                             label = { Text(route.label) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = BcvBlue,
-                                selectedTextColor = BcvBlue,
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,6 +237,7 @@ fun BcvAquiNavHost() {
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
+                    .tourTarget(if (currentBottom == AppRoute.Settings) TourKeys.SETTINGS_CONTENT else if (currentBottom == AppRoute.Tools) TourKeys.TOOLS_CONTENT else "content")
                     .background(
                         if (isHome) Color.Transparent else MaterialTheme.colorScheme.background
                     )
@@ -225,7 +252,7 @@ fun BcvAquiNavHost() {
                     popExitTransition = { Motion.tabExit() }
                 ) {
                     composable(AppRoute.Home.route) {
-                        HomeScreen(viewModel = viewModel)
+                        if (lite) com.codeonyx.bcvaqui.ui.home.LiteHomeScreen(viewModel) else HomeScreen(viewModel = viewModel)
                     }
                     navigation(
                         startDestination = ToolRoutes.HUB,
@@ -242,11 +269,16 @@ fun BcvAquiNavHost() {
                         }
                         toolComposable(ToolRoutes.DONDE) { DondeScreen(viewModel) }
                         toolComposable(ToolRoutes.COMISION) { ComisionScreen() }
-                        toolComposable(ToolRoutes.VARIACION) { VariacionScreen(viewModel) }
+                        toolComposable(ToolRoutes.CALCULADORA) { CalculatorPanel(viewModel) }
                         toolComposable(ToolRoutes.HISTORIAL) { HistorialScreen(viewModel) }
                         toolComposable(ToolRoutes.DIVIDIR) { DividirScreen(viewModel) }
-                        toolComposable(ToolRoutes.COMPARTIR) { CompartirToolScreen(viewModel) }
                         toolComposable(ToolRoutes.AGENDA) { AgendaPagosScreen(viewModel) }
+                        toolComposable(ToolRoutes.IVA_IGTF) { IvaIgtfScreen(viewModel) }
+                        toolComposable(ToolRoutes.BRECHA) { BrechaScreen(viewModel) }
+                        toolComposable(ToolRoutes.MERCADO) { com.codeonyx.bcvaqui.ui.tools.MercadoScreen(viewModel) }
+                        toolComposable(ToolRoutes.DEUDAS) { com.codeonyx.bcvaqui.ui.tools.finance.DeudasScreen(viewModel) }
+                        toolComposable(ToolRoutes.AHORROS) { com.codeonyx.bcvaqui.ui.tools.finance.AhorrosScreen(viewModel) }
+                        toolComposable(ToolRoutes.COMERCIANTE) { com.codeonyx.bcvaqui.ui.tools.ComercianteScreen(viewModel) }
                     }
                     composable(AppRoute.Settings.route) {
                         SettingsScreen(
@@ -259,6 +291,33 @@ fun BcvAquiNavHost() {
                 }
             }
         }
+        if (showTour) {
+            com.codeonyx.bcvaqui.ui.tour.TourOverlay(
+                targets = tourTargets,
+                onNavigate = { r ->
+                    val dest = when (r) { "tools" -> AppRoute.Tools.route; "settings" -> AppRoute.Settings.route; else -> AppRoute.Home.route }
+                    if (currentBottom?.route != dest) navController.navigate(dest) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true; restoreState = true
+                    }
+                },
+                onFocus = { tourFocus = it },
+                onLite = {
+                    viewModel.setLiteMode(true)
+                    viewModel.completeOnboarding()
+                    navController.navigate(AppRoute.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id); launchSingleTop = true
+                    }
+                },
+                onFinish = {
+                    viewModel.completeOnboarding()
+                    navController.navigate(AppRoute.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id); launchSingleTop = true
+                    }
+                }
+            )
+        }
+    }
     }
 }
 

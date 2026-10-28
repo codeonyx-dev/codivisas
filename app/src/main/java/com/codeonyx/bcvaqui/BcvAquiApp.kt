@@ -11,7 +11,6 @@ class BcvAquiApp : Application() {
         super.onCreate()
         createNotificationChannels()
         WorkScheduler.scheduleAllBackgroundWork(this)
-        WorkScheduler.enqueueImmediateRefresh(this)
     }
 
     private fun createNotificationChannels() {

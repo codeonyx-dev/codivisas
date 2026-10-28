@@ -1,5 +1,8 @@
 package com.codeonyx.bcvaqui.ui.donde
 
+import androidx.compose.material.icons.filled.Close
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,9 +81,9 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
-    val dashboard by viewModel.dashboard.collectAsState()
-    val preferences by viewModel.preferences.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
+    val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     val rates = dashboard?.bcvRates.orEmpty()
     val worldRates = dashboard?.worldRatesUsd.orEmpty()
@@ -128,7 +131,7 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SurfaceLight),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -151,7 +154,7 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
                     )
                 }
                 IconButton(onClick = { showCurrencyPicker = true }) {
-                    Icon(Icons.Default.Edit, contentDescription = "Elegir monedas", tint = BcvBlue)
+                    Icon(Icons.Default.Edit, contentDescription = "Elegir monedas", tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(
                     onClick = { viewModel.refresh(forceNetwork = true) },
@@ -170,7 +173,7 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -198,7 +201,7 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
 
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = BcvBlue.copy(alpha = 0.06f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -210,7 +213,7 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
                             OutlinedTextField(
                                 value = amountInput,
                                 onValueChange = { raw ->
-                                    amountInput = raw.filter { c -> c.isDigit() || c == '.' }
+                                    amountInput = com.codeonyx.bcvaqui.domain.VeNumber.sanitize(raw)
                                         .let { cleaned ->
                                             val parts = cleaned.split('.')
                                             if (parts.size <= 1) cleaned
@@ -219,16 +222,22 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
                                 },
                                 label = { Text(sourceDest?.chipLabel ?: sourceCurrency) },
                                 suffix = { Text(sourceSymbol, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                trailingIcon = if (amountInput.isNotEmpty()) { {
+                                    androidx.compose.material3.IconButton(onClick = { amountInput = "" }) {
+                                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Close, "Borrar monto")
+                                    }
+                                } } else null,
+                                textStyle = MaterialTheme.typography.titleMedium,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BcvBlue,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
-                                    focusedLabelColor = BcvBlue
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
@@ -276,13 +285,13 @@ fun DondeScreen(viewModel: MainViewModel = appViewModel()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(SurfaceLight)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 2.dp
                 ) {
                     Column(
@@ -391,7 +400,7 @@ private fun FlagBadge(flag: String, size: Dp) {
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
@@ -414,7 +423,7 @@ private fun CompactBaseChip(
     onClick: () -> Unit
 ) {
     val borderColor = if (selected) BcvBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-    val bg = if (selected) BcvBlue.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -448,7 +457,7 @@ private fun CurrencyCheckRow(
     onClick: () -> Unit
 ) {
     val borderColor = if (selected) BcvBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-    val bg = if (selected) BcvBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -515,7 +524,7 @@ private fun ResultRow(
         onClick = onClick,
         enabled = !isBase,
         shape = RoundedCornerShape(16.dp),
-        color = if (isBase) Color(0xFFE8EEF8) else Color.White,
+        color = if (isBase) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
         shadowElevation = if (isBase) 0.dp else 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -549,7 +558,7 @@ private fun ResultRow(
                         Spacer(modifier = Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = BcvBlue.copy(alpha = 0.15f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         ) {
                             Text(
                                 text = "Base",
@@ -566,7 +575,7 @@ private fun ResultRow(
                 text = amountText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isBase) BcvBlue else MaterialTheme.colorScheme.onSurface,
+                color = if (isBase) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End,
                 maxLines = 1,
                 softWrap = false
@@ -576,7 +585,7 @@ private fun ResultRow(
 }
 
 private fun parseAmountInput(raw: String): Double =
-    raw.replace(",", "").toDoubleOrNull() ?: 0.0
+    com.codeonyx.bcvaqui.domain.VeNumber.parse(raw)
 
 private fun formatInputAmount(value: Double): String {
     val rounded = FxCalculator.round2(value)
