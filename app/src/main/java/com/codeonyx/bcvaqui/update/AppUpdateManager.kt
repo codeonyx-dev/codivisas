@@ -48,14 +48,11 @@ object AppUpdateManager {
     suspend fun checkForUpdate(context: Context, notifyIfAvailable: Boolean = true): UpdateManifest? {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val connection = java.net.URL(ApiConfig.UPDATE_MANIFEST_URL).openConnection().apply {
-                    connectTimeout = 15_000
-                    readTimeout = 15_000
-                    setRequestProperty("Accept", "application/json")
-                    setRequestProperty("User-Agent", "Codivisas/${BuildConfig.VERSION_NAME}")
-                }
-                val body = connection.getInputStream().bufferedReader().use { it.readText() }
-                val manifest = json.decodeFromString<UpdateManifest>(body)
+                val manifest = ApiConfig.UPDATE_MANIFEST_URLS.firstNotNullOfOrNull { url ->
+                    runCatching { fetchManifest(url) }
+                        .onFailure { Log.w(TAG, "Manifiesto no disponible en $url", it) }
+                        .getOrNull()
+                } ?: return@runCatching null
                 if (manifest.versionCode > BuildConfig.VERSION_CODE && isAllowedApkUrl(manifest.apkUrl)) {
                     if (notifyIfAvailable) {
                         val onWifi = isOnWifi(context)
@@ -330,7 +327,18 @@ object AppUpdateManager {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    /** Solo se aceptan APKs servidos por GitHub bajo la organización del proyecto. */
+    private fun fetchManifest(url: String): UpdateManifest {
+        val connection = java.net.URL(url).openConnection().apply {
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "Codivisas/${BuildConfig.VERSION_NAME}")
+        }
+        val body = connection.getInputStream().bufferedReader().use { it.readText() }
+        return json.decodeFromString<UpdateManifest>(body)
+    }
+
+    /** Solo se aceptan APKs de codeonyx.online/codivisas o de GitHub bajo la organización del proyecto. */
     fun isAllowedApkUrl(url: String): Boolean {
         val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return false
         if (!uri.scheme.equals("https", ignoreCase = true)) return false
@@ -339,6 +347,7 @@ object AppUpdateManager {
         return when (host) {
             "github.com" -> path.startsWith("/$ALLOWED_OWNER/")
             "objects.githubusercontent.com" -> true
+            "codeonyx.online" -> path.startsWith("/codivisas/")
             else -> false
         }
     }

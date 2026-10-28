@@ -14,7 +14,10 @@ object ApiConfig {
     const val HTTP_TIMEOUT_SECONDS = 30L
     /** Montos rápidos del widget convertidor (USD/EUR → Bs.). */
     val WIDGET_CONVERT_PRESETS = listOf(50.0, 100.0, 200.0, 500.0)
-    /** Manifiesto de actualización (raw en GitHub). Actualizar en cada release. */
-    const val UPDATE_MANIFEST_URL =
+    /** Manifiesto de actualización, servido desde codeonyx.online. Actualizar en cada release. */
+    const val UPDATE_MANIFEST_URL = "https://codeonyx.online/codivisas/update.json"
+    /** Respaldo en GitHub mientras el repositorio siga público. */
+    const val UPDATE_MANIFEST_FALLBACK_URL =
         "https://raw.githubusercontent.com/codeonyx-dev/spread-ve/main/update.json"
+    val UPDATE_MANIFEST_URLS = listOf(UPDATE_MANIFEST_URL, UPDATE_MANIFEST_FALLBACK_URL)
 }
