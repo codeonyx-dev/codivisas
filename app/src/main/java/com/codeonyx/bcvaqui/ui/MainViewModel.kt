@@ -39,6 +39,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _historyError = MutableStateFlow<String?>(null)
     val historyError: StateFlow<String?> = _historyError.asStateFlow()
 
+    private val _market = MutableStateFlow<com.codeonyx.bcvaqui.data.repository.MarketSeries?>(null)
+    val market: StateFlow<com.codeonyx.bcvaqui.data.repository.MarketSeries?> = _market.asStateFlow()
+
+    private val _marketLoading = MutableStateFlow(false)
+    val marketLoading: StateFlow<Boolean> = _marketLoading.asStateFlow()
+
+    fun loadMarket() {
+        if (_marketLoading.value) return
+        viewModelScope.launch {
+            _marketLoading.value = true
+            _market.value = repository.fetchMarketSeries()
+            _marketLoading.value = false
+        }
+    }
+
+    fun setMerchantMargin(percent: Double) {
+        viewModelScope.launch { preferencesRepository.setMerchantMarginPercent(percent) }
+    }
+
     init {
         refresh(forceNetwork = true)
     }
@@ -90,7 +109,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setPalette(palette: com.codeonyx.bcvaqui.domain.AppPalette) {
+        viewModelScope.launch {
+            com.codeonyx.bcvaqui.ui.theme.PaletteStore.write(getApplication(), palette)
+            preferencesRepository.setPalette(palette.name)
+            com.codeonyx.bcvaqui.ui.theme.PaletteManager.applyLauncherIcon(getApplication(), palette)
+            Widgets.updateAll(getApplication())
+        }
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch { preferencesRepository.setThemeMode(mode) }
+    }
+
+    fun addCalculatorHistory(entry: String) {
+        viewModelScope.launch { preferencesRepository.addCalculatorHistory(entry) }
+    }
+
+    fun clearCalculatorHistory() {
+        viewModelScope.launch { preferencesRepository.clearCalculatorHistory() }
+    }
+
+    val tourRequested = kotlinx.coroutines.flow.MutableStateFlow(false)
+    fun replayTour() { tourRequested.value = true }
+
+    fun setNotifySource(key: String, on: Boolean) = viewModelScope.launch {
+        preferencesRepository.setNotifySource(key, on)
+    }
+    fun setQuietHours(enabled: Boolean, start: Int, end: Int) = viewModelScope.launch {
+        preferencesRepository.setQuietHours(enabled, start, end)
+    }
+    fun setDebtReminders(on: Boolean) = viewModelScope.launch { preferencesRepository.setDebtReminders(on) }
+    fun setLiteMode(on: Boolean) = viewModelScope.launch { preferencesRepository.setLiteMode(on) }
+    fun setAutoUpdateCheck(on: Boolean) = viewModelScope.launch { preferencesRepository.setAutoUpdateCheck(on) }
+
     fun completeOnboarding() {
+        tourRequested.value = false
         viewModelScope.launch {
             preferencesRepository.setHasSeenOnboarding(true)
         }
@@ -131,6 +185,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             preferencesRepository.setDondeCurrencies(next)
         }
+    }
+
+    fun setDefaultPaymentContact(id: String) {
+        viewModelScope.launch { preferencesRepository.setDefaultPaymentContact(id) }
     }
 
     fun savePaymentContact(contact: PaymentContact) {

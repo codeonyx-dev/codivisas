@@ -1,13 +1,25 @@
 package com.codeonyx.bcvaqui.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import com.codeonyx.bcvaqui.domain.AppPalette
 
-val BcvBlue = Color(0xFF1E3A8A)
-val BcvBlueLight = Color(0xFF3B82F6)
-val BcvBlueDark = Color(0xFF172554)
-val BcvIndigo = Color(0xFF6366F1)
-val BcvGold = Color(0xFFFBBF24)
-val BcvGoldDark = Color(0xFFD97706)
+
+
+/** Paleta activa (estado de Compose: al cambiarla se recomponen todas las pantallas). */
+object ActivePalette {
+    var current: AppPalette by mutableStateOf(AppPalette.DEFAULT)
+}
+
+// Los nombres históricos (BcvBlue/BcvGold…) ahora siguen la paleta elegida.
+val BcvBlue: Color get() = Color(ActivePalette.current.primary)
+val BcvBlueLight: Color get() = Color(ActivePalette.current.primaryLight)
+val BcvBlueDark: Color get() = Color(ActivePalette.current.primaryDark)
+val BcvIndigo: Color get() = Color(ActivePalette.current.tertiary)
+val BcvGold: Color get() = Color(ActivePalette.current.accent)
+val BcvGoldDark: Color get() = Color(ActivePalette.current.accentDark)
 val SurfaceLight = Color(0xFFF8FAFC)
 val CardElevated = Color(0xFFFFFFFF)
 val OnSurfaceMuted = Color(0xFF64748B)
