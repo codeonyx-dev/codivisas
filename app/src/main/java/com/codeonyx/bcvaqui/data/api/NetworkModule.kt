@@ -38,7 +38,7 @@ object NetworkModule {
             .addInterceptor { chain ->
                 chain.proceed(
                     chain.request().newBuilder()
-                        .header("User-Agent", "SpreadVE/1.0 Android")
+                        .header("User-Agent", "Codivisas/1.0 Android")
                         .header("Accept", "application/json")
                         .header("Cache-Control", "no-cache")
                         .build()
@@ -92,5 +92,14 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(BinanceP2pApi::class.java)
+    }
+
+    val dolarApi: DolarApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(ApiConfig.DOLAR_API_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DolarApi::class.java)
     }
 }

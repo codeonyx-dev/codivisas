@@ -5,6 +5,8 @@ package com.codeonyx.bcvaqui.data
  */
 object ApiConfig {
     const val BCV_RATE_URL = "https://bcv.today/api/v1/"
+    /** Respaldo de la tasa oficial BCV si bcv.today falla. */
+    const val DOLAR_API_URL = "https://ve.dolarapi.com/"
     const val WORLD_FX_URL = "https://open.er-api.com/"
     const val BINANCE_P2P_URL = "https://p2p.binance.com/"
     const val WIDGET_UPDATE_INTERVAL_MINUTES = 30L

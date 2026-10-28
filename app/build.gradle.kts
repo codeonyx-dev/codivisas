@@ -30,8 +30,8 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
                 storeFile = rootProject.file(prop("storeFile"))
                 storePassword = prop("storePassword")
                 keyAlias = prop("keyAlias")
@@ -43,11 +43,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Nunca firmar el release con la clave de debug: ese APK no podría
+            // actualizar el que los usuarios ya tienen instalado.
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -76,6 +74,19 @@ android {
     }
 }
 
+// Falla con un mensaje claro si se intenta empaquetar el release sin keystore.
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any { task ->
+        task.project == project && Regex("^(assemble|bundle|package|sign)Release.*").matches(task.name)
+    }
+    if (buildsRelease && !keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "Falta keystore.properties en la raíz del proyecto. El release no se firma con la clave " +
+                "de debug. Copia keystore.properties.example, complétalo y vuelve a compilar."
+        )
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -100,4 +111,6 @@ dependencies {
     implementation(libs.androidx.splashscreen)
 
     debugImplementation(libs.androidx.compose.ui.tooling.preview)
+
+    testImplementation("junit:junit:4.13.2")
 }
