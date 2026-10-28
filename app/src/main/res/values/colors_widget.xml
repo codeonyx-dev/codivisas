@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widgets en tema claro (el sistema elige values-night en modo oscuro). -->
+<resources>
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_background_end">#FFEFF4FF</color>
+    <color name="widget_text">#FF0F172A</color>
+    <color name="widget_text_muted">#B3172554</color>
+    <color name="widget_accent">#FF1E3A8A</color>
+    <color name="widget_chip_bg">#1A1E3A8A</color>
+    <color name="widget_background_onix">#FFFFFFFF</color>
+    <color name="widget_background_end_onix">#FFFEF2F2</color>
+    <color name="widget_background_morado">#FFFFFFFF</color>
+    <color name="widget_background_end_morado">#FFF5F3FF</color>
+    <color name="widget_background_esmeralda">#FFFFFFFF</color>
+    <color name="widget_background_end_esmeralda">#FFECFDF5</color>
+</resources>

@@ -41,14 +41,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="100 USD"
-        android:textColor="@color/bcv_gold"
+        android:textColor="@color/widget_accent"
         android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_converter_to"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeMaxTextSize="30sp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="38dp"
+        android:gravity="center_vertical"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="—"

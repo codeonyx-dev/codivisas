@@ -18,6 +18,10 @@ class ConverterWidgetProvider : AppWidgetProvider() {
         WorkScheduler.onWidgetAdded(context)
     }
 
+    override fun onDisabled(context: Context) {
+        WorkScheduler.onWidgetRemoved(context)
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -74,7 +78,7 @@ class ConverterWidgetProvider : AppWidgetProvider() {
                 R.id.widget_converter_rate,
                 rate?.let {
                     "${RateSources.rateSourceLabel(snap.currency)} ${FxCalculator.format2(it)}"
-                } ?: "Sin tasa"
+                }?.let { r -> Widgets.offlineMarker(snap)?.let { "$r\n$it" } ?: r } ?: "Sin tasa"
             )
             views.setOnClickPendingIntent(
                 R.id.widget_converter_root,

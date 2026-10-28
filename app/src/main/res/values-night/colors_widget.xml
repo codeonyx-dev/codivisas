@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_background">#FF0F1B3D</color>
+    <color name="widget_background_end">#FF0B1120</color>
+    <color name="widget_text">#FFFFFFFF</color>
+    <color name="widget_text_muted">#B3FFFFFF</color>
+    <color name="widget_accent">#FFFBBF24</color>
+    <color name="widget_chip_bg">#33FFFFFF</color>
+    <color name="widget_background_onix">#FF161618</color>
+    <color name="widget_background_end_onix">#FF0E0E10</color>
+    <color name="widget_background_morado">#FF1E0B3F</color>
+    <color name="widget_background_end_morado">#FF0F0720</color>
+    <color name="widget_background_esmeralda">#FF052E24</color>
+    <color name="widget_background_end_esmeralda">#FF03140F</color>
+</resources>
