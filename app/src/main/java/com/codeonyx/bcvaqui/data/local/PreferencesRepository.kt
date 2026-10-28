@@ -45,11 +45,45 @@ data class UserPreferences(
     val alertThresholdPercent: Double = 1.0,
     val widgetConvertAmount: Double = 100.0,
     /** Empieza en true para evitar un parpadeo antes de que DataStore cargue. */
-    val hasSeenOnboarding: Boolean = true
+    val hasSeenOnboarding: Boolean = true,
+    val merchantMarginPercent: Double = 0.0,
+    /** "system", "light" o "dark". */
+    val themeMode: String = ThemeModes.SYSTEM,
+    /** Operaciones recientes de la calculadora (más reciente primero). */
+    val calculatorHistory: List<String> = emptyList(),
+    val notifyBcvUsd: Boolean = true,
+    val notifyBcvEur: Boolean = false,
+    val notifyUsdt: Boolean = false,
+    val quietHoursEnabled: Boolean = false,
+    val quietStartHour: Int = 22,
+    val quietEndHour: Int = 7,
+    /** Avisar deudas próximas o vencidas. */
+    val debtReminders: Boolean = true,
+    val autoUpdateCheck: Boolean = true,
+    val liteMode: Boolean = false,
+    /** Última carga exitosa de todas las fuentes (JSON de RatesSnapshot). */
+    val ratesSnapshotJson: String? = null,
+    /** true si el último intento de actualizar por red falló (modo sin conexión). */
+    val lastRefreshFailed: Boolean = false,
+    /** Paleta de colores elegida (ver AppPalette). */
+    val palette: String = "AZUL"
 )
+
+object ThemeModes {
+    const val SYSTEM = "system"
+    const val LIGHT = "light"
+    const val DARK = "dark"
+}
+
+private const val HISTORY_SEPARATOR = "\u001F"
+private const val MAX_CALC_HISTORY = 10
 
 class PreferencesRepository(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
+
+    /** Caché en disco del histórico BCV (filesDir, excluido del respaldo como el resto de datos). */
+    fun historyDiskCache(): HistoryDiskCache =
+        HistoryDiskCache(java.io.File(context.filesDir, "bcv_history.json"))
 
     private object Keys {
         val SELECTED_CURRENCY = stringPreferencesKey("selected_currency")
@@ -68,6 +102,22 @@ class PreferencesRepository(private val context: Context) {
         val ALERT_THRESHOLD = doublePreferencesKey("alert_threshold_percent")
         val WIDGET_CONVERT_AMOUNT = doublePreferencesKey("widget_convert_amount")
         val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val CALC_HISTORY = stringPreferencesKey("calculator_history")
+        val MERCHANT_MARGIN = doublePreferencesKey("merchant_margin_percent")
+        val NOTIFY_USD = booleanPreferencesKey("notify_bcv_usd")
+        val NOTIFY_EUR = booleanPreferencesKey("notify_bcv_eur")
+        val NOTIFY_USDT = booleanPreferencesKey("notify_usdt")
+        val QUIET_ON = booleanPreferencesKey("quiet_hours_enabled")
+        val QUIET_START = intPreferencesKey("quiet_start_hour")
+        val QUIET_END = intPreferencesKey("quiet_end_hour")
+        val NOTIFY_BASELINES = stringPreferencesKey("notify_baselines_json")
+        val DEBT_REMINDERS = booleanPreferencesKey("debt_reminders")
+        val AUTO_UPDATE = booleanPreferencesKey("auto_update_check")
+        val LITE_MODE = booleanPreferencesKey("lite_mode")
+        val RATES_SNAPSHOT = stringPreferencesKey("rates_snapshot_json")
+        val REFRESH_FAILED = booleanPreferencesKey("last_refresh_failed")
+        val PALETTE = stringPreferencesKey("app_palette")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -94,8 +144,80 @@ class PreferencesRepository(private val context: Context) {
             variationTodayRate = prefs[Keys.VARIATION_TODAY],
             alertThresholdPercent = prefs[Keys.ALERT_THRESHOLD] ?: 1.0,
             widgetConvertAmount = prefs[Keys.WIDGET_CONVERT_AMOUNT] ?: 100.0,
-            hasSeenOnboarding = prefs[Keys.HAS_SEEN_ONBOARDING] ?: false
+            hasSeenOnboarding = prefs[Keys.HAS_SEEN_ONBOARDING] ?: false,
+            merchantMarginPercent = prefs[Keys.MERCHANT_MARGIN] ?: 0.0,
+            themeMode = prefs[Keys.THEME_MODE] ?: ThemeModes.SYSTEM,
+            calculatorHistory = prefs[Keys.CALC_HISTORY]
+                ?.split(HISTORY_SEPARATOR)
+                ?.filter { it.isNotBlank() }
+                .orEmpty(),
+            notifyBcvUsd = prefs[Keys.NOTIFY_USD] ?: true,
+            notifyBcvEur = prefs[Keys.NOTIFY_EUR] ?: false,
+            notifyUsdt = prefs[Keys.NOTIFY_USDT] ?: false,
+            quietHoursEnabled = prefs[Keys.QUIET_ON] ?: false,
+            quietStartHour = prefs[Keys.QUIET_START] ?: 22,
+            quietEndHour = prefs[Keys.QUIET_END] ?: 7,
+            debtReminders = prefs[Keys.DEBT_REMINDERS] ?: true,
+            autoUpdateCheck = prefs[Keys.AUTO_UPDATE] ?: true,
+            liteMode = prefs[Keys.LITE_MODE] ?: false,
+            ratesSnapshotJson = prefs[Keys.RATES_SNAPSHOT],
+            lastRefreshFailed = prefs[Keys.REFRESH_FAILED] ?: false,
+            palette = prefs[Keys.PALETTE] ?: "AZUL"
         )
+    }
+
+    suspend fun setNotifySource(key: String, on: Boolean) {
+        context.dataStore.edit {
+            when (key) {
+                "BCV_USD" -> it[Keys.NOTIFY_USD] = on
+                "BCV_EUR" -> it[Keys.NOTIFY_EUR] = on
+                "USDT" -> it[Keys.NOTIFY_USDT] = on
+            }
+        }
+    }
+
+    suspend fun setQuietHours(enabled: Boolean, start: Int, end: Int) {
+        context.dataStore.edit { it[Keys.QUIET_ON] = enabled; it[Keys.QUIET_START] = start; it[Keys.QUIET_END] = end }
+    }
+
+    suspend fun setDebtReminders(on: Boolean) { context.dataStore.edit { it[Keys.DEBT_REMINDERS] = on } }
+    suspend fun setPalette(id: String) { context.dataStore.edit { it[Keys.PALETTE] = id } }
+    suspend fun saveRatesSnapshot(jsonString: String) {
+        context.dataStore.edit { it[Keys.RATES_SNAPSHOT] = jsonString; it[Keys.REFRESH_FAILED] = false }
+    }
+    suspend fun setRefreshFailed(failed: Boolean) { context.dataStore.edit { it[Keys.REFRESH_FAILED] = failed } }
+    suspend fun setLiteMode(on: Boolean) { context.dataStore.edit { it[Keys.LITE_MODE] = on } }
+    suspend fun setAutoUpdateCheck(on: Boolean) { context.dataStore.edit { it[Keys.AUTO_UPDATE] = on } }
+
+    suspend fun notifyBaselines(): Map<String, Double> =
+        context.dataStore.data.first()[Keys.NOTIFY_BASELINES]
+            ?.let { runCatching { json.decodeFromString<Map<String, Double>>(it) }.getOrNull() }.orEmpty()
+
+    suspend fun setNotifyBaselines(map: Map<String, Double>) {
+        context.dataStore.edit { it[Keys.NOTIFY_BASELINES] = json.encodeToString(map) }
+    }
+
+    suspend fun setMerchantMarginPercent(percent: Double) {
+        context.dataStore.edit { it[Keys.MERCHANT_MARGIN] = percent.coerceIn(-90.0, 500.0) }
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        context.dataStore.edit { it[Keys.THEME_MODE] = mode }
+    }
+
+    suspend fun addCalculatorHistory(entry: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.CALC_HISTORY]
+                ?.split(HISTORY_SEPARATOR)
+                ?.filter { it.isNotBlank() }
+                .orEmpty()
+            val updated = (listOf(entry) + current.filter { it != entry }).take(MAX_CALC_HISTORY)
+            prefs[Keys.CALC_HISTORY] = updated.joinToString(HISTORY_SEPARATOR)
+        }
+    }
+
+    suspend fun clearCalculatorHistory() {
+        context.dataStore.edit { it.remove(Keys.CALC_HISTORY) }
     }
 
     suspend fun setSelectedCurrency(code: String) {
@@ -141,13 +263,18 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun upsertPaymentContact(contact: PaymentContact) {
         val current = preferences.first().paymentContacts
-        val next = current.filterNot { it.id == contact.id } + contact
-        setPaymentContacts(next.sortedBy { it.displayName.lowercase() })
+        var next = current.filterNot { it.id == contact.id } + contact
+        if (contact.isDefault) next = com.codeonyx.bcvaqui.data.model.PaymentMigration.setDefault(next, contact.id)
+        setPaymentContacts(com.codeonyx.bcvaqui.data.model.PaymentMigration.normalize(next.sortedBy { it.displayName.lowercase() }))
     }
 
     suspend fun deletePaymentContact(id: String) {
         val next = preferences.first().paymentContacts.filterNot { it.id == id }
-        setPaymentContacts(next)
+        setPaymentContacts(com.codeonyx.bcvaqui.data.model.PaymentMigration.normalize(next))
+    }
+
+    suspend fun setDefaultPaymentContact(id: String) {
+        setPaymentContacts(com.codeonyx.bcvaqui.data.model.PaymentMigration.setDefault(preferences.first().paymentContacts, id))
     }
 
     suspend fun cacheRates(
@@ -189,8 +316,6 @@ class PreferencesRepository(private val context: Context) {
 
     private fun decodePaymentContacts(jsonString: String?): List<PaymentContact> {
         if (jsonString.isNullOrBlank()) return emptyList()
-        return runCatching {
-            json.decodeFromString<List<PaymentContact>>(jsonString)
-        }.getOrDefault(emptyList())
+        return com.codeonyx.bcvaqui.data.model.PaymentMigration.decode(jsonString)
     }
 }

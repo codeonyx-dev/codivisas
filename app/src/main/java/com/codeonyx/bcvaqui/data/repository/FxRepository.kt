@@ -1,6 +1,7 @@
 package com.codeonyx.bcvaqui.data.repository
 
 import com.codeonyx.bcvaqui.data.api.NetworkModule
+import com.codeonyx.bcvaqui.data.local.HistoryDiskCache
 import com.codeonyx.bcvaqui.data.local.PreferencesRepository
 import com.codeonyx.bcvaqui.data.local.UserPreferences
 import com.codeonyx.bcvaqui.data.model.BcvRateResponse
@@ -9,12 +10,17 @@ import com.codeonyx.bcvaqui.data.model.CurrencyRate
 import com.codeonyx.bcvaqui.data.model.FxDashboard
 import com.codeonyx.bcvaqui.data.model.WhereDestination
 import com.codeonyx.bcvaqui.domain.FxCalculator
+import com.codeonyx.bcvaqui.domain.DayPoint
+import com.codeonyx.bcvaqui.domain.MarketMath
+import com.codeonyx.bcvaqui.domain.NextRate
+import com.codeonyx.bcvaqui.domain.UsdtQuote
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 
 class FxRepository(
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val historyDisk: HistoryDiskCache? = preferencesRepository.historyDiskCache()
 ) {
     val preferences = preferencesRepository.preferences
     private var historyCache: List<BcvRateResponse> = emptyList()
@@ -33,13 +39,31 @@ class FxRepository(
                 val bcvDeferred = async { fetchBcvRatesWithRetry() }
                 val worldDeferred = async { fetchWorldRatesSafe() }
                 val binanceDeferred = async { fetchBinanceUsdtVes() }
+                val sellDeferred = async { fetchBinanceSide("SELL") }
+                val nextDeferred = async { fetchNextRateSafe() }
 
                 val bcvResult = bcvDeferred.await()
                 val world = worldDeferred.await()
                 val binance = binanceDeferred.await()
+                val sell = sellDeferred.await()
+                val next = nextDeferred.await()
                 val bcvRates = bcvResult.rates
                 val bcvUpdatedAt = bcvResult.updatedAt
 
+                val now = System.currentTimeMillis()
+                val merged = com.codeonyx.bcvaqui.domain.OfflineRates.merge(
+                    com.codeonyx.bcvaqui.domain.OfflineRates.decode(prefs.ratesSnapshotJson),
+                    com.codeonyx.bcvaqui.domain.RatesSnapshot(
+                        bcvRates = bcvRates.values.toList(),
+                        bcvUpdatedAt = bcvUpdatedAt,
+                        worldRatesUsd = world.rates,
+                        worldUpdatedAt = world.updatedAt,
+                        usdtBuy = binance.rate,
+                        usdtSell = sell.rate,
+                        loadedAtMs = now
+                    )
+                )
+                preferencesRepository.saveRatesSnapshot(com.codeonyx.bcvaqui.domain.OfflineRates.encode(merged))
                 preferencesRepository.cacheRates(
                     rates = bcvRates,
                     updatedAt = bcvUpdatedAt,
@@ -51,20 +75,73 @@ class FxRepository(
                 FxDashboard(
                     bcvRates = bcvRates,
                     bcvUpdatedAt = bcvUpdatedAt,
-                    worldRatesUsd = world.rates,
-                    worldRatesUpdatedAt = world.updatedAt,
-                    binanceUsdtVes = binance.rate,
+                    worldRatesUsd = merged.worldRatesUsd,
+                    worldRatesUpdatedAt = merged.worldUpdatedAt,
+                    binanceUsdtVes = binance.rate ?: merged.usdtBuy,
                     binanceError = binance.error,
-                    isFromCache = false
+                    isFromCache = false,
+                    nextBcvUsd = next,
+                    usdtQuote = if (binance.rate != null || sell.rate != null) {
+                        UsdtQuote(binance.rate, sell.rate, System.currentTimeMillis())
+                    } else null,
+                    loadedAtMs = now
                 )
             }
         }.recoverCatching { error ->
-            if (cachedRates.isNotEmpty()) {
+            preferencesRepository.setRefreshFailed(true)
+            if (cachedRates.isNotEmpty() || com.codeonyx.bcvaqui.domain.OfflineRates.decode(prefs.ratesSnapshotJson) != null) {
                 buildDashboardFromCache(prefs, cachedRates, error.message)
             } else {
                 throw error
             }
         }
+    }
+
+    private suspend fun fetchNextRateSafe(): NextRate? = runCatching {
+        val today = java.time.LocalDate.now(java.time.ZoneId.of("America/Caracas")).toString()
+        MarketMath.nextRate(officialSeries(force = true), today)
+    }.getOrNull()
+
+    private var officialCache: List<DayPoint> = emptyList()
+    private var parallelCache: List<DayPoint> = emptyList()
+
+    private suspend fun officialSeries(force: Boolean = false): List<DayPoint> {
+        if (!force && officialCache.isNotEmpty()) return officialCache
+        return runCatching {
+            NetworkModule.dolarApi.getOfficialHistory().toPoints().also { officialCache = it }
+        }.getOrDefault(officialCache)
+    }
+
+    private fun List<com.codeonyx.bcvaqui.data.model.DolarApiHistoryEntry>.toPoints(): List<DayPoint> =
+        mapNotNull { e ->
+            val d = e.fecha?.take(10) ?: return@mapNotNull null
+            val v = e.promedio ?: return@mapNotNull null
+            DayPoint(d, v)
+        }.sortedBy { it.date }
+
+    /**
+     * Series para gráficos: BCV (histórico en disco + ve.dolarapi.com como relleno) y paralelo/USDT.
+     * Las fechas futuras (tasa ya publicada del próximo día) se excluyen.
+     */
+    suspend fun fetchMarketSeries(): MarketSeries = coroutineScope {
+        val today = java.time.LocalDate.now(java.time.ZoneId.of("America/Caracas")).toString()
+        val localDeferred = async {
+            runCatching { loadHistoryEntries(forceNetwork = false) }.getOrDefault(emptyList())
+                .mapNotNull { r ->
+                    val d = (r.effectiveDate ?: r.date ?: r.updatedAt)?.take(10) ?: return@mapNotNull null
+                    r.USD?.let { DayPoint(d, it) }
+                }
+        }
+        val officialDeferred = async { officialSeries() }
+        val parallelDeferred = async {
+            if (parallelCache.isNotEmpty()) parallelCache else runCatching {
+                NetworkModule.dolarApi.getParallelHistory().toPoints().also { parallelCache = it }
+            }.getOrDefault(emptyList())
+        }
+        val bcv = MarketMath.merge(localDeferred.await(), officialDeferred.await())
+            .filter { it.date <= today }
+        val usdt = parallelDeferred.await().filter { it.date <= today }
+        MarketSeries(bcv = bcv, usdt = usdt, gap = MarketMath.gapSeries(bcv, usdt))
     }
 
     /** Últimos [days] días del histórico BCV (más reciente al final). */
@@ -89,6 +166,14 @@ class FxRepository(
                 kotlinx.coroutines.delay(1_000L * (attempt + 1))
             }
         }
+        // Respaldo: ve.dolarapi.com (tasa oficial USD/EUR).
+        runCatching {
+            coroutineScope {
+                val usd = async { NetworkModule.dolarApi.getUsdOfficial() }
+                val eur = async { runCatching { NetworkModule.dolarApi.getEurOfficial() }.getOrNull() }
+                BcvFallback.toBcvResponse(usd.await(), eur.await())
+            }
+        }.getOrNull()?.let { return parseBcvResponse(it) }
         throw lastError ?: IllegalStateException("Failed to fetch BCV rates")
     }
 
@@ -102,8 +187,12 @@ class FxRepository(
             NetworkModule.bcvTodayApi.getHistory().also {
                 historyCache = it
                 historyCacheAtMs = System.currentTimeMillis()
+                historyDisk?.write(it)
             }
-        }.getOrElse { historyCache }
+        }.getOrElse {
+            if (historyCache.isEmpty()) historyCache = historyDisk?.read().orEmpty()
+            historyCache
+        }
     }
 
     /** bcv.today/rate.json a veces queda atrasado; el histórico suele tener la tasa del día. */
@@ -134,13 +223,15 @@ class FxRepository(
         }
     }
 
-    private suspend fun fetchBinanceUsdtVes(): BinanceFetchResult {
+    private suspend fun fetchBinanceUsdtVes(): BinanceFetchResult = fetchBinanceSide("BUY")
+
+    private suspend fun fetchBinanceSide(tradeType: String): BinanceFetchResult {
         return runCatching {
             val response = NetworkModule.binanceP2pApi.searchAds(
                 BinanceSearchRequest(
                     asset = "USDT",
                     fiat = "VES",
-                    tradeType = "BUY",
+                    tradeType = tradeType,
                     page = 1,
                     rows = 10,
                     payTypes = emptyList()
@@ -190,12 +281,21 @@ class FxRepository(
         cachedRates: Map<String, CurrencyRate>,
         errorMessage: String? = null
     ): FxDashboard {
+        val snap = com.codeonyx.bcvaqui.domain.OfflineRates.decode(prefs.ratesSnapshotJson)
+        val rates = cachedRates.ifEmpty { com.codeonyx.bcvaqui.domain.OfflineRates.ratesMap(snap) }
+        val buy = prefs.lastKnownBinanceUsdtVes ?: snap?.usdtBuy
         return FxDashboard(
-            bcvRates = cachedRates,
-            bcvUpdatedAt = prefs.lastKnownUpdatedAt,
-            binanceUsdtVes = prefs.lastKnownBinanceUsdtVes,
+            bcvRates = rates,
+            bcvUpdatedAt = prefs.lastKnownUpdatedAt ?: snap?.bcvUpdatedAt,
+            worldRatesUsd = snap?.worldRatesUsd.orEmpty(),
+            worldRatesUpdatedAt = snap?.worldUpdatedAt,
+            binanceUsdtVes = buy,
             isFromCache = true,
-            errorMessage = errorMessage ?: "Sin conexión — mostrando última tasa guardada"
+            errorMessage = errorMessage ?: "Sin conexión — mostrando última tasa guardada",
+            usdtQuote = if (buy != null || snap?.usdtSell != null) {
+                UsdtQuote(buy, snap?.usdtSell, snap?.loadedAtMs ?: prefs.lastFetchEpochMs)
+            } else null,
+            loadedAtMs = (snap?.loadedAtMs ?: prefs.lastFetchEpochMs).takeIf { it > 0L }
         )
     }
 
@@ -218,3 +318,9 @@ class FxRepository(
         const val HISTORY_CACHE_TTL_MS = 15 * 60 * 1000L
     }
 }
+
+data class MarketSeries(
+    val bcv: List<DayPoint>,
+    val usdt: List<DayPoint>,
+    val gap: List<DayPoint>
+)
