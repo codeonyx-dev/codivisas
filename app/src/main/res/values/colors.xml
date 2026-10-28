@@ -3,12 +3,9 @@
     <color name="bcv_blue">#1E3A8A</color>
     <color name="bcv_blue_dark">#172554</color>
     <color name="bcv_gold">#FBBF24</color>
-    <color name="widget_background">#FF1E3A8A</color>
-    <color name="widget_background_end">#FF172554</color>
-    <color name="widget_text">#FFFFFFFF</color>
-    <color name="widget_text_muted">#B3FFFFFF</color>
     <color name="positive_green">#FF2E7D32</color>
     <color name="negative_red">#FFC62828</color>
     <color name="offline_banner">#FFF59E0B</color>
     <color name="offline_banner_text">#FF78350F</color>
+    <color name="launcher_bg">#1E3A8A</color>
 </resources>

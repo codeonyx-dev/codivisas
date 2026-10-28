@@ -28,7 +28,7 @@ data class ReceiptData(
 
 object ReceiptShareHelper {
 
-    fun share(context: Context, data: ReceiptData, paymentText: String? = null) {
+    fun share(context: Context, data: ReceiptData, paymentText: String? = null, fullText: String? = null) {
         runCatching {
             val bitmap = drawReceiptBitmap(context, data)
             val dir = File(context.cacheDir, "share").apply { mkdirs() }
@@ -43,7 +43,7 @@ object ReceiptShareHelper {
                 "${context.packageName}.fileprovider",
                 file
             )
-            val text = buildShareText(data, paymentText)
+            val text = fullText ?: buildShareText(data, paymentText)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -94,7 +94,7 @@ object ReceiptShareHelper {
         val logoCx = dp(50f)
         val logoCy = dp(52f)
         val logoR = dp(26f)
-        val discPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1E3A8A.toInt() }
+        val discPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = com.codeonyx.bcvaqui.ui.theme.ActivePalette.current.primary.toInt() }
         canvas.drawCircle(logoCx, logoCy, logoR, discPaint)
 
         val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -129,7 +129,7 @@ object ReceiptShareHelper {
         canvas.drawPath(head2, headPaint)
 
         val sparkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFFFBBF24.toInt()
+            color = com.codeonyx.bcvaqui.ui.theme.ActivePalette.current.accent.toInt()
             style = Paint.Style.STROKE
             strokeWidth = dp(2f)
             strokeCap = Paint.Cap.ROUND
@@ -144,7 +144,7 @@ object ReceiptShareHelper {
             )
         }
         canvas.drawPath(spark, sparkPaint)
-        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFBBF24.toInt() }
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = com.codeonyx.bcvaqui.ui.theme.ActivePalette.current.accent.toInt() }
         canvas.drawCircle(logoCx + dp(12f), logoCy - dp(12f), dp(2.4f), dotPaint)
 
         // Title
@@ -157,7 +157,7 @@ object ReceiptShareHelper {
             color = 0xFFA1A1AA.toInt()
             textSize = dp(13f)
         }
-        canvas.drawText("SpreadVE", dp(86f), dp(48f), titlePaint)
+        canvas.drawText("Codivisas", dp(86f), dp(48f), titlePaint)
         canvas.drawText("Comprobante de Cálculo", dp(86f), dp(68f), subtitlePaint)
 
         // White rate card
