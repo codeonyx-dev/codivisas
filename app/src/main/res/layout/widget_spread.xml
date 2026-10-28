@@ -31,10 +31,12 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_spread_lbl_bcv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
                 android:text="BCV"
-                android:textColor="@color/bcv_gold"
+                android:textColor="@color/widget_accent"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -46,7 +48,7 @@
                 android:maxLines="1"
                 android:text="—"
                 android:textColor="@color/widget_text"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -58,10 +60,12 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_spread_lbl_p2p"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
                 android:text="P2P"
-                android:textColor="@color/bcv_gold"
+                android:textColor="@color/widget_accent"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -73,7 +77,7 @@
                 android:maxLines="1"
                 android:text="—"
                 android:textColor="@color/widget_text"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -85,10 +89,12 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_spread_lbl_pct"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Spread"
-                android:textColor="@color/bcv_gold"
+                android:letterSpacing="0.08"
+                android:text="Brecha"
+                android:textColor="@color/widget_accent"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
@@ -100,7 +106,7 @@
                 android:maxLines="1"
                 android:text="—"
                 android:textColor="@color/widget_text"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>

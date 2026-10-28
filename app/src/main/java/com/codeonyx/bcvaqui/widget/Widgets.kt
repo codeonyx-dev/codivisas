@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.widget.RemoteViews
 import com.codeonyx.bcvaqui.MainActivity
 import com.codeonyx.bcvaqui.R
@@ -32,6 +34,7 @@ object Widgets {
     suspend fun loadSnapshot(context: Context): WidgetSnapshot {
         val repo = PreferencesRepository(context)
         val prefs = repo.preferences.first()
+        refreshNight(context)
         val cached = repo.decodeCachedRates(prefs.lastKnownRatesJson)
         val currency = prefs.selectedCurrency
         val rate = RateSources.effectiveRate(
@@ -54,6 +57,13 @@ object Widgets {
         return WidgetSnapshot(prefs, currency, rate, dayChangePct, alertActive, alertUp)
     }
 
+    /** Marca de sin conexión para widgets, o null si la última actualización fue exitosa. */
+    fun offlineMarker(snapshot: WidgetSnapshot): String? {
+        val snap = com.codeonyx.bcvaqui.domain.OfflineRates.decode(snapshot.prefs.ratesSnapshotJson)
+        if (!com.codeonyx.bcvaqui.domain.OfflineRates.isOffline(snapshot.prefs.lastRefreshFailed, snap)) return null
+        return com.codeonyx.bcvaqui.domain.OfflineRates.widgetMarker(snap?.loadedAtMs)
+    }
+
     fun alertBackground(snapshot: WidgetSnapshot): Int = when {
         !snapshot.alertActive -> R.drawable.widget_background
         snapshot.alertUp -> R.drawable.widget_background_alert_up
@@ -71,19 +81,65 @@ object Widgets {
     }
 
     fun applyBrandAndAlert(views: RemoteViews, rootId: Int, snapshot: WidgetSnapshot) {
-        views.setInt(rootId, "setBackgroundResource", alertBackground(snapshot))
+        val palette = com.codeonyx.bcvaqui.domain.AppPalette.from(snapshot.prefs.palette)
+        val bg = if (snapshot.alertActive) alertBackground(snapshot) else paletteBackground(palette)
+        views.setInt(rootId, "setBackgroundResource", bg)
+        accentViewsFor(rootId).forEach { id -> views.setTextColor(id, paletteAccent(palette)) }
     }
 
+    /** Fondo del widget según la paleta (claro: blanco con tinte; oscuro: color de la paleta). */
+    fun paletteBackground(p: com.codeonyx.bcvaqui.domain.AppPalette): Int = when (p) {
+        com.codeonyx.bcvaqui.domain.AppPalette.AZUL -> R.drawable.widget_background
+        com.codeonyx.bcvaqui.domain.AppPalette.ONIX -> R.drawable.widget_background_onix
+        com.codeonyx.bcvaqui.domain.AppPalette.MORADO -> R.drawable.widget_background_morado
+        com.codeonyx.bcvaqui.domain.AppPalette.ESMERALDA -> R.drawable.widget_background_esmeralda
+    }
+
+    private var nightCache: Boolean = false
+
+    /** Color de acento: color principal en claro, acento de la paleta en oscuro. */
+    private fun paletteAccent(p: com.codeonyx.bcvaqui.domain.AppPalette): Int =
+        (if (nightCache) p.darkAccent
+        else if (com.codeonyx.bcvaqui.domain.AppPalette.contrast(p.accent, 0xFFFFFFFF) >= 4.5) p.accent
+        else p.primary).toInt()
+
+    fun refreshNight(context: Context) {
+        nightCache = (context.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    /** Vista de acento (etiqueta de moneda) que existe en cada layout, para no tocar ids ausentes. */
+    private fun accentViewsFor(rootId: Int): List<Int> = when (rootId) {
+        R.id.widget_root -> listOf(R.id.widget_currency_label)
+        R.id.widget_converter_root -> listOf(R.id.widget_converter_from)
+        R.id.widget_spread_root -> listOf(R.id.widget_spread_lbl_bcv, R.id.widget_spread_lbl_p2p, R.id.widget_spread_lbl_pct)
+        else -> emptyList()
+    }
+
+    private val providers = listOf(
+        RateWidgetProvider::class.java,
+        SpreadWidgetProvider::class.java,
+        ConverterWidgetProvider::class.java,
+    )
+
+    /** true si el usuario tiene al menos un widget de Codivisas en la pantalla de inicio. */
+    fun hasAnyWidget(context: Context): Boolean {
+        val manager = AppWidgetManager.getInstance(context) ?: return false
+        return providers.any { cls ->
+            runCatching { manager.getAppWidgetIds(ComponentName(context, cls)).isNotEmpty() }
+                .getOrDefault(false)
+        }
+    }
+
+    /** Actualiza los widgets colocados; si no hay ninguno no lee nada. */
     fun updateAll(context: Context) {
+        val appContext = context.applicationContext
+        if (!hasAnyWidget(appContext)) return
         runAsync {
-            val appContext = context.applicationContext
             val snapshot = loadSnapshot(appContext)
             RateWidgetProvider.updateAllWidgets(appContext, snapshot)
-            MiniRateWidgetProvider.updateAllWidgets(appContext, snapshot)
             SpreadWidgetProvider.updateAllWidgets(appContext, snapshot)
             ConverterWidgetProvider.updateAllWidgets(appContext, snapshot)
-            VariationWidgetProvider.updateAllWidgets(appContext, snapshot)
-            ShareRateWidgetProvider.updateAllWidgets(appContext, snapshot)
         }
     }
 

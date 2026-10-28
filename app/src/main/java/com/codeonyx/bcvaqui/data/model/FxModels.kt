@@ -16,6 +16,21 @@ data class BcvRateResponse(
     val source: String? = null
 )
 
+@Serializable
+data class DolarApiQuote(
+    val moneda: String? = null,
+    val fuente: String? = null,
+    val promedio: Double? = null,
+    val fechaActualizacion: String? = null
+)
+
+@Serializable
+data class DolarApiHistoryEntry(
+    val fuente: String? = null,
+    val promedio: Double? = null,
+    val fecha: String? = null
+)
+
 /** Entrada del histórico diario BCV (misma forma que rate.json). */
 typealias BcvHistoryEntry = BcvRateResponse
 
@@ -43,7 +58,13 @@ data class FxDashboard(
     val binanceUsdtVes: Double? = null,
     val binanceError: String? = null,
     val isFromCache: Boolean,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** Tasa BCV USD del próximo día hábil, si ya fue publicada. */
+    val nextBcvUsd: com.codeonyx.bcvaqui.domain.NextRate? = null,
+    /** USDT/VES compra, venta y promedio (Binance P2P). */
+    val usdtQuote: com.codeonyx.bcvaqui.domain.UsdtQuote? = null,
+    /** Momento (epoch ms) de la última carga exitosa mostrada. */
+    val loadedAtMs: Long? = null
 )
 
 @Serializable

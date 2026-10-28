@@ -6,7 +6,16 @@ import kotlinx.serialization.Serializable
 enum class PaymentType {
     PAGO_MOVIL,
     CUENTA_VE,
-    CUENTA_EXTRANJERA
+    CUENTA_EXTRANJERA,
+    BINANCE,
+    WALLY,
+    ZINLI,
+    CUENTA_CO,
+    ZELLE,
+    PAYPAL;
+
+    /** Métodos que se cobran en dólares: al compartir se destaca el monto en USD. */
+    val isUsd: Boolean get() = this == BINANCE || this == WALLY || this == ZINLI || this == ZELLE || this == PAYPAL
 }
 
 @Serializable
@@ -27,7 +36,14 @@ data class PaymentContact(
     val currency: String = "",
     /** IBAN, SWIFT, routing, etc. */
     val extraInfo: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    /** Correo (Zelle, PayPal, Binance, Zinli, Wally). */
+    val email: String = "",
+    /** Usuario / alias (Binance user, paypal.me, Wally). */
+    val userHandle: String = "",
+    /** Tipo de cuenta (Ahorros / Corriente / Nequi / Daviplata). */
+    val accountType: String = "",
+    val isDefault: Boolean = false
 ) {
     fun formatForCopy(): String = buildString {
         when (type) {
@@ -55,6 +71,7 @@ data class PaymentContact(
                 if (documentId.isNotBlank()) appendLine("- Documento: $documentId")
                 if (extraInfo.isNotBlank()) appendLine("- $extraInfo")
             }
+            else -> append(com.codeonyx.bcvaqui.domain.ShareFormatter.methodBlock(this@PaymentContact, null, null))
         }
     }.trim()
 
@@ -69,6 +86,12 @@ data class PaymentContact(
         PaymentType.PAGO_MOVIL -> "Pago móvil"
         PaymentType.CUENTA_VE -> "Cuenta VE"
         PaymentType.CUENTA_EXTRANJERA -> "Cuenta extranjera"
+        PaymentType.BINANCE -> "Binance"
+        PaymentType.WALLY -> "Wally"
+        PaymentType.ZINLI -> "Zinli"
+        PaymentType.CUENTA_CO -> "Cuenta Colombia"
+        PaymentType.ZELLE -> "Zelle"
+        PaymentType.PAYPAL -> "PayPal"
     }
 
     fun subtitle(): String = when (type) {
@@ -78,6 +101,12 @@ data class PaymentContact(
             .filter { it.isNotBlank() }
             .joinToString(" · ")
             .ifBlank { accountNumber }
+        PaymentType.BINANCE -> listOf(accountNumber, email, userHandle).firstOrNull { it.isNotBlank() }.orEmpty()
+        PaymentType.WALLY, PaymentType.ZINLI -> listOf(email, phone, userHandle).firstOrNull { it.isNotBlank() }.orEmpty()
+        PaymentType.ZELLE -> email.ifBlank { phone }
+        PaymentType.PAYPAL -> email.ifBlank { userHandle }
+        PaymentType.CUENTA_CO -> listOf(bankName, accountType, accountNumber.ifBlank { phone })
+            .filter { it.isNotBlank() }.joinToString(" · ")
     }
 }
 
@@ -115,4 +144,42 @@ object VenezuelanBanks {
     )
 
     fun byCode(code: String): VenezuelanBank? = ALL.find { it.code == code }
+}
+
+/** Bancos y billeteras comunes en Colombia. */
+object ColombianBanks {
+    val ALL = listOf(
+        "Bancolombia", "Banco de Bogotá", "Davivienda", "BBVA Colombia", "Banco de Occidente",
+        "Banco Popular", "Banco AV Villas", "Banco Caja Social", "Scotiabank Colpatria",
+        "Banco Agrario", "Itaú", "Banco Falabella", "Nequi", "Daviplata"
+    )
+    val ACCOUNT_TYPES = listOf("Ahorros", "Corriente")
+    fun isWallet(bank: String) = bank.equals("Nequi", true) || bank.equals("Daviplata", true)
+}
+
+/** Lectura tolerante de los métodos guardados (migra datos viejos sin perderlos). */
+object PaymentMigration {
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; coerceInputValues = true }
+
+    fun decode(raw: String?): List<PaymentContact> {
+        if (raw.isNullOrBlank()) return emptyList()
+        val array = runCatching { json.parseToJsonElement(raw) as? kotlinx.serialization.json.JsonArray }
+            .getOrNull() ?: return emptyList()
+        val contacts = array.mapNotNull { element ->
+            runCatching { json.decodeFromJsonElement(PaymentContact.serializer(), element) }.getOrNull()
+        }
+        return normalize(contacts)
+    }
+
+    /** Garantiza un único predeterminado: el marcado, o el primer pago móvil, o el primero. */
+    fun normalize(contacts: List<PaymentContact>): List<PaymentContact> {
+        if (contacts.isEmpty()) return contacts
+        val defaultId = contacts.firstOrNull { it.isDefault }?.id
+            ?: contacts.firstOrNull { it.type == PaymentType.PAGO_MOVIL }?.id
+            ?: contacts.first().id
+        return contacts.map { it.copy(isDefault = it.id == defaultId) }
+    }
+
+    fun setDefault(contacts: List<PaymentContact>, id: String): List<PaymentContact> =
+        contacts.map { it.copy(isDefault = it.id == id) }
 }

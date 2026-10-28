@@ -1,5 +1,11 @@
 package com.codeonyx.bcvaqui.ui.home
 
+import com.codeonyx.bcvaqui.domain.CopyTexts
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import kotlinx.coroutines.launch
+import com.codeonyx.bcvaqui.domain.ShareConversion
+import com.codeonyx.bcvaqui.domain.ShareFormatter
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -51,7 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,17 +83,27 @@ import com.codeonyx.bcvaqui.ui.appViewModel
 import com.codeonyx.bcvaqui.ui.share.ReceiptData
 import com.codeonyx.bcvaqui.ui.share.ReceiptShareHelper
 import com.codeonyx.bcvaqui.ui.theme.BcvBlue
+import com.codeonyx.bcvaqui.R
+import com.codeonyx.bcvaqui.ui.theme.BrandColors
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import com.codeonyx.bcvaqui.domain.VeNumber
+import com.codeonyx.bcvaqui.domain.PriceTools
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.filled.Close
 import com.codeonyx.bcvaqui.ui.theme.BcvBlueDark
 import com.codeonyx.bcvaqui.ui.theme.BcvGold
 import com.codeonyx.bcvaqui.ui.theme.BcvIndigo
 import com.codeonyx.bcvaqui.ui.theme.currencyAccent
+import com.codeonyx.bcvaqui.ui.tour.TourKeys
+import com.codeonyx.bcvaqui.ui.tour.tourTarget
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
-    val dashboard by viewModel.dashboard.collectAsState()
-    val preferences by viewModel.preferences.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
+    val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val rates = dashboard?.bcvRates.orEmpty()
@@ -103,11 +119,20 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
     var amountInput by remember { mutableStateOf("1") }
     var convertToVes by remember { mutableStateOf(true) }
     var currencyMenuExpanded by remember { mutableStateOf(false) }
-    var copyMenuExpanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackScope = androidx.compose.runtime.rememberCoroutineScope()
+    val copiedMsg = stringResource(R.string.copied)
+    val copyAndNotify: (String) -> Unit = { text ->
+        copyHomeText(context, text)
+        snackScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar("$copiedMsg: $text", duration = androidx.compose.material3.SnackbarDuration.Short)
+        }
+    }
     var showShareSheet by remember { mutableStateOf(false) }
     var showCalculator by remember { mutableStateOf(false) }
 
-    val amount = amountInput.toDoubleOrNull() ?: 0.0
+    val amount = VeNumber.parse(amountInput)
     val result = if (convertToVes) {
         FxCalculator.round2(amount * selectedRate)
     } else if (selectedRate > 0) {
@@ -141,9 +166,19 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
             .takeUnless { selectedCurrency == RateSources.BINANCE_USDT }
     )
     val copyText = ReceiptShareHelper.formatConversionLine(receiptData)
+    val usdBcv = rates["USD"]?.rateToVes
+    val shareConversion = ShareConversion(
+        rateLabel = ShareFormatter.rateLabelFor(selectedCurrency),
+        currencyCode = selectedCurrency,
+        foreignAmount = foreignAmount,
+        vesAmount = vesAmount,
+        usdAmount = if (selectedCurrency == "EUR" && usdBcv != null && usdBcv > 0) vesAmount / usdBcv else null
+    )
     val copyRateText =
         "1 $selectedCurrency = ${FxCalculator.format2(selectedRate)} Bs. · $rateSourceLabel"
     val paymentContacts = preferences.paymentContacts
+    val resultPlain = FxCalculator.format2(result)
+    val resultWithUnit = if (convertToVes) "$resultPlain Bs." else "$resultPlain $selectedCurrency"
 
     PullToRefreshBox(
         isRefreshing = isLoading,
@@ -152,40 +187,23 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(BcvBlueDark, BcvBlue, BcvIndigo)
+                    colors = BrandColors.heroGradient
                 )
             )
     ) {
-        Box(
-            modifier = Modifier
-                .size(220.dp)
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = 8.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-        )
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                .align(Alignment.BottomStart)
-                .padding(bottom = 60.dp, start = 8.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.04f))
-        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             if (dashboard?.isFromCache == true) {
                 OfflineBanner(
-                    message = dashboard?.errorMessage
-                        ?: "Sin conexión — mostrando última tasa guardada",
+                    message = com.codeonyx.bcvaqui.domain.OfflineRates.lastLoadedLine(dashboard?.loadedAtMs ?: preferences.lastFetchEpochMs),
                     onRetry = { viewModel.refresh(forceNetwork = true) }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             Row(
@@ -222,9 +240,9 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            Box {
+            Box(modifier = Modifier.tourTarget(TourKeys.RATE)) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -234,15 +252,15 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CurrencyBadge(code = selectedCurrency, size = 48.dp, accent = accent)
+                        CurrencyBadge(code = selectedCurrency, size = 42.dp, accent = accent)
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = FxCalculator.currencyLabel(selectedCurrency),
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -335,18 +353,30 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.AMOUNT),
                 shape = MaterialTheme.shapes.large,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 6.dp
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     OutlinedTextField(
                         value = amountInput,
-                        onValueChange = { amountInput = it.filter { c -> c.isDigit() || c == '.' } },
+                        onValueChange = { amountInput = VeNumber.sanitize(it) },
+                        trailingIcon = if (amountInput.isNotEmpty()) {
+                            {
+                                IconButton(onClick = { amountInput = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.action_clear_amount)
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
                         label = {
                             Text(
                                 if (convertToVes) "Monto en $selectedCurrency"
@@ -358,17 +388,18 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                         shape = MaterialTheme.shapes.small,
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BcvBlue,
-                            focusedLabelColor = BcvBlue,
-                            cursorColor = BcvBlue
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedButton(
                         onClick = { convertToVes = !convertToVes },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         shape = MaterialTheme.shapes.small,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
@@ -391,11 +422,12 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .tourTarget(TourKeys.RESULT)
                     .animateContentSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -405,15 +437,24 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     color = Color.White.copy(alpha = 0.6f),
                     letterSpacing = 1.5.sp
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = if (convertToVes) {
                         "${FxCalculator.format2(animatedResult.toDouble())} Bs."
                     } else {
                         "${FxCalculator.format2(animatedResult.toDouble())} $selectedCurrency"
                     },
-                    style = MaterialTheme.typography.displaySmall.copy(fontSize = 44.sp),
+                    style = MaterialTheme.typography.displaySmall.copy(fontSize = 38.sp),
                     color = BcvGold,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .combinedClickable(
+                            onClickLabel = "Copiar monto",
+                            onLongClickLabel = "Copiar monto con moneda",
+                            onClick = { copyAndNotify(CopyTexts.amountOnly(result)) },
+                            onLongClick = { copyAndNotify(resultWithUnit) }
+                        )
+                        .padding(horizontal = 8.dp),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -430,61 +471,41 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.COPY),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(
-                            onClick = { copyMenuExpanded = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                        ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Copiar", fontWeight = FontWeight.SemiBold)
-                        }
-                        DropdownMenu(
-                            expanded = copyMenuExpanded,
-                            onDismissRequest = { copyMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Copiar tasa") },
-                                onClick = {
-                                    copyMenuExpanded = false
-                                    copyToClipboard(context, copyRateText)
-                                    Toast.makeText(context, "Tasa copiada", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Copiar conversión") },
-                                onClick = {
-                                    copyMenuExpanded = false
-                                    copyToClipboard(context, copyText)
-                                    Toast.makeText(context, "Conversión copiada", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        }
+                    HomeCopyButton(stringResource(R.string.copy_rate_of_day), Modifier.weight(1f)) {
+                        copyAndNotify(CopyTexts.rateOfDay(ShareFormatter.rateLabelFor(selectedCurrency), selectedRate, receiptData.updatedAt))
                     }
-
+                    HomeCopyButton(stringResource(R.string.copy_conversion), Modifier.weight(1f)) {
+                        copyAndNotify(
+                            CopyTexts.conversion(amount, result, FxCalculator.currencySymbol(selectedCurrency), convertToVes)
+                        )
+                    }
+                    HomeCopyButton(stringResource(R.string.copy_amount_only), Modifier.weight(1f)) {
+                        copyAndNotify(CopyTexts.amountOnly(result))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.SHARE)) {
                     Button(
                         onClick = {
                             if (paymentContacts.isEmpty()) {
-                                ReceiptShareHelper.share(context, receiptData)
+                                ReceiptShareHelper.share(
+                                    context, receiptData,
+                                    fullText = ShareFormatter.build(shareConversion, emptyList())
+                                )
                             } else {
                                 showShareSheet = true
                             }
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .height(46.dp),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White,
@@ -498,10 +519,10 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.STATUS),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -522,6 +543,12 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
                     }
                 }
 
+                Spacer(modifier = Modifier.height(4.dp))
+                HomeStatusRow(
+                    lastFetchEpochMs = preferences.lastFetchEpochMs,
+                    gapPercent = PriceTools.gapPercent(rates["USD"]?.rateToVes, binanceRate)
+                )
+
                 if (dashboard?.isFromCache != true) {
                     dashboard?.errorMessage?.let {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -532,68 +559,25 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
         }
 
         if (!isLoading && rates.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(BcvBlueDark, BcvBlue, BcvIndigo)
-                        )
-                    )
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = Color.White,
-                    shadowElevation = 6.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = BcvBlue,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "No pudimos cargar las tasas",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            "Revisa tu conexión e inténtalo nuevamente.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.refresh(forceNetwork = true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BcvBlue)
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-            }
+            HomeErrorState(onRetry = { viewModel.refresh(forceNetwork = true) })
         }
+        androidx.compose.material3.SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+        )
     }
 
     if (showShareSheet) {
         ShareWithPaymentSheet(
             contacts = paymentContacts,
+            defaultCopRate = dashboard?.worldRatesUsd?.get("COP"),
             onDismiss = { showShareSheet = false },
-            onShare = { contact ->
+            onShare = { methods, copRate ->
                 showShareSheet = false
                 ReceiptShareHelper.share(
                     context = context,
                     data = receiptData,
-                    paymentText = contact?.formatForCopy()
+                    fullText = ShareFormatter.build(shareConversion, methods, copRate)
                 )
             }
         )
@@ -607,159 +591,18 @@ fun HomeScreen(viewModel: MainViewModel = appViewModel()) {
         )
     }
 
-    if (!preferences.hasSeenOnboarding) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Bienvenido a SpreadVE") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("• BCV: tasa oficial para USD, EUR y otras monedas.")
-                    Text("• Binance P2P: referencia de mercado para USDT/VES.")
-                    Text("• Dónde: compara cuánto representa un monto en varios países.")
-                    Text(
-                        "Puedes cambiar tu moneda principal y administrar tus datos de pago desde Ajustes.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.completeOnboarding() },
-                    colors = ButtonDefaults.buttonColors(containerColor = BcvBlue)
-                ) {
-                    Text("Entendido")
-                }
-            }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ShareWithPaymentSheet(
-    contacts: List<PaymentContact>,
-    onDismiss: () -> Unit,
-    onShare: (PaymentContact?) -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp)
-        ) {
-            Text(
-                text = "Compartir conversión",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "¿Quieres incluir datos de pago móvil o cuenta?",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            TextButton(
-                onClick = { onShare(null) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Solo conversión")
-            }
-
-            contacts.forEach { contact ->
-                Surface(
-                    onClick = { onShare(contact) },
-                    shape = RoundedCornerShape(14.dp),
-                    color = BcvBlue.copy(alpha = 0.06f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(contact.displayName, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "${contact.typeLabel()} · ${contact.subtitle()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable
-private fun OfflineBanner(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
+private fun HomeCopyButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 42.dp),
         shape = MaterialTheme.shapes.medium,
-        color = Color(0xFFFBBF24)
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Sin conexión",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF78350F)
-                )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF92400E)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Surface(
-                onClick = onRetry,
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF78350F)
-            ) {
-                Text(
-                    text = "Reintentar",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White
-                )
-            }
-        }
+        Text(label, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium, maxLines = 2)
     }
-}
-
-@Composable
-private fun CurrencyBadge(
-    code: String,
-    size: androidx.compose.ui.unit.Dp,
-    accent: Color
-) {
-    Surface(
-        modifier = Modifier.size(size),
-        shape = CircleShape,
-        color = accent.copy(alpha = 0.15f),
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, accent.copy(alpha = 0.4f))
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = FxCalculator.currencySymbol(code),
-                fontWeight = FontWeight.Bold,
-                fontSize = (size.value * 0.35f).sp,
-                color = accent
-            )
-        }
-    }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("BCV monto", text))
 }

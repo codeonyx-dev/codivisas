@@ -39,14 +39,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="Dólar · USD"
-        android:textColor="@color/bcv_gold"
+        android:textColor="@color/widget_accent"
         android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_rate_text"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeMaxTextSize="40sp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
+        android:gravity="center_vertical"
         android:layout_marginTop="2dp"
         android:ellipsize="end"
         android:maxLines="1"
@@ -62,6 +66,16 @@
         android:text="Bs. por 1 USD"
         android:textColor="@color/widget_text_muted"
         android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/widget_trend_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="■ 0,00%"
+        android:textColor="@color/widget_accent"
+        android:textSize="12sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_updated_text"

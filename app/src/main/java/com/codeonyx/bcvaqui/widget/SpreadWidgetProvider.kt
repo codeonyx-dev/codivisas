@@ -14,6 +14,10 @@ class SpreadWidgetProvider : AppWidgetProvider() {
         WorkScheduler.onWidgetAdded(context)
     }
 
+    override fun onDisabled(context: Context) {
+        WorkScheduler.onWidgetRemoved(context)
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -66,7 +70,7 @@ class SpreadWidgetProvider : AppWidgetProvider() {
                 } ?: "—"
             )
 
-            val footer = when {
+            val footer = Widgets.offlineMarker(snap) ?: when {
                 p2p == null -> "P2P no disponible · abre la app para actualizar"
                 spreadPct != null -> "P2P USDT/VES · Binance"
                 else -> "USD · referencia de mercado"

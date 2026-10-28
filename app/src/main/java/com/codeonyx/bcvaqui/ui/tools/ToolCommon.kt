@@ -1,5 +1,26 @@
 package com.codeonyx.bcvaqui.ui.tools
 
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.animation.togetherWith
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.codeonyx.bcvaqui.R
+import com.codeonyx.bcvaqui.domain.VeNumber
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -27,6 +48,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,10 +79,11 @@ fun ToolScaffold(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceLight)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .imePadding()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content
     )
 }
@@ -70,8 +93,8 @@ fun ToolIntro(text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        color = BcvBlue.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, BcvBlue.copy(alpha = 0.14f))
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -79,12 +102,12 @@ fun ToolIntro(text: String) {
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = BcvBlue.copy(alpha = 0.14f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    tint = BcvBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(7.dp).size(18.dp)
                 )
             }
@@ -94,7 +117,7 @@ fun ToolIntro(text: String) {
                     text = "¿Qué hace esta herramienta?",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = BcvBlue
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -115,24 +138,27 @@ fun ToolPanel(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        shadowElevation = 2.dp
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ToolResultCard(
     title: String,
     value: String,
     detail: String? = null,
-    accent: Color = BcvBlue,
-    changePercent: Double? = null
+    accent: Color = MaterialTheme.colorScheme.primary,
+    changePercent: Double? = null,
+    shareText: String? = "$title: $value" + (detail?.let { "\n$it" } ?: "") + "\n— Codivisas"
 ) {
     Surface(
         modifier = Modifier
@@ -140,9 +166,10 @@ fun ToolResultCard(
             .clip(RoundedCornerShape(20.dp))
             .animateContentSize(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        shadowElevation = 2.dp,
-        tonalElevation = 0.dp
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 3.dp,
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
     ) {
         Column {
             Box(
@@ -172,12 +199,29 @@ fun ToolResultCard(
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineSmall,
+                val context = LocalContext.current
+                val plain = plainNumber(value)
+                androidx.compose.animation.AnimatedContent(
+                    targetState = value,
+                    transitionSpec = {
+                        (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) +
+                            androidx.compose.animation.slideInVertically { it / 3 }) togetherWith
+                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                    },
+                    label = "toolResult"
+                ) { shown -> Text(
+                    text = shown,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = accent
-                )
+                    color = accent,
+                    maxLines = 2,
+                    modifier = Modifier.combinedClickable(
+                        onClickLabel = stringResource(R.string.copy_number),
+                        onLongClickLabel = stringResource(R.string.copy_with_currency),
+                        onClick = { copyText(context, plain) },
+                        onLongClick = { copyText(context, value) }
+                    )
+                ) }
                 if (!detail.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -185,6 +229,10 @@ fun ToolResultCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                if (shareText != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ResultActions(shareText = shareText, plainValue = plain, fullValue = value)
                 }
             }
         }
@@ -199,12 +247,18 @@ fun ToolEmptyResult(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)) {
+                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp).size(26.dp))
+            }
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 title,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -212,6 +266,7 @@ fun ToolEmptyResult(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 hint,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -221,8 +276,8 @@ fun ToolEmptyResult(
 
 @Composable
 fun toolChipColors() = FilterChipDefaults.filterChipColors(
-    selectedContainerColor = BcvBlue.copy(alpha = 0.14f),
-    selectedLabelColor = BcvBlue
+    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+    selectedLabelColor = MaterialTheme.colorScheme.primary
 )
 
 @Composable
@@ -273,33 +328,102 @@ fun ToolNumberField(
     onValueChange: (String) -> Unit,
     label: String,
     suffix: String? = null,
-    helper: String? = null
+    helper: String? = null,
+    modifier: Modifier = Modifier
 ) {
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     OutlinedTextField(
         value = value,
-        onValueChange = { raw ->
-            onValueChange(
-                raw.replace(',', '.').filter { it.isDigit() || it == '.' }.let { cleaned ->
-                    val parts = cleaned.split('.')
-                    if (parts.size <= 1) cleaned
-                    else parts.first() + "." + parts.drop(1).joinToString("").take(4)
-                }
-            )
-        },
+        onValueChange = { raw -> onValueChange(VeNumber.sanitize(raw)) },
         label = { Text(label) },
         suffix = suffix?.let { { Text(it) } },
         supportingText = helper?.let { { Text(it) } },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth(),
+        trailingIcon = if (value.isNotEmpty()) {
+            {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.action_clear_field, label)
+                    )
+                }
+            }
+        } else {
+            null
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { focus.clearFocus() }),
+        textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        modifier = modifier.fillMaxWidth().heightIn(min = 60.dp),
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BcvBlue,
-            focusedLabelColor = BcvBlue,
-            unfocusedContainerColor = SurfaceLight,
-            focusedContainerColor = Color.White
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedContainerColor = MaterialTheme.colorScheme.surface
         )
     )
+}
+
+/** Extrae el número de un texto de resultado: "$ 1.234,56" -> "1.234,56". */
+fun plainNumber(value: String): String =
+    Regex("-?[0-9][0-9.,]*").find(value)?.value?.trimEnd('.', ',') ?: value
+
+/** Copia al portapapeles y muestra "Copiado: …". */
+fun copyText(context: Context, text: String) {
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText("Codivisas", text))
+    Toast.makeText(context, context.getString(R.string.toast_copied_value, text), Toast.LENGTH_SHORT).show()
+}
+
+/** Acciones de un resultado: copiar número, copiar con moneda y compartir. */
+@Composable
+fun ResultActions(
+    shareText: String,
+    plainValue: String? = null,
+    fullValue: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val shareTitle = stringResource(R.string.action_share)
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = { copyText(context, plainValue ?: shareText) },
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+            ) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(if (plainValue != null) R.string.copy_number else R.string.action_copy))
+            }
+            OutlinedButton(
+                onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                    }
+                    runCatching { context.startActivity(Intent.createChooser(send, shareTitle)) }
+                },
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(shareTitle)
+            }
+        }
+        if (fullValue != null && fullValue != plainValue) {
+            TextButton(
+                onClick = { copyText(context, fullValue) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.copy_with_currency_value, fullValue))
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -337,7 +461,7 @@ fun CurrencyChips(
             FilterChip(
                 selected = code == selected,
                 onClick = { onSelect(code) },
-                modifier = Modifier.widthIn(min = 96.dp),
+                modifier = Modifier.widthIn(min = 96.dp).heightIn(min = 44.dp),
                 label = {
                     Text(
                         if (code == "VES") "Bs."
@@ -351,5 +475,56 @@ fun CurrencyChips(
     }
 }
 
-fun parseToolAmount(raw: String): Double =
-    raw.replace(',', '.').toDoubleOrNull() ?: 0.0
+fun parseToolAmount(raw: String): Double = VeNumber.parse(raw)
+
+/** Selector segmentado de una sola línea con pesos iguales (no se parte el texto). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> SegmentedChoice(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.material3.SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
+        options.forEachIndexed { i, opt ->
+            SegmentedButton(
+                selected = opt == selected,
+                onClick = { onSelect(opt) },
+                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
+                icon = {},
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    label(opt), maxLines = 1, softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
+
+
+/** Estado de error amable con botón de reintento. */
+@Composable
+fun ToolErrorState(message: String, onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("😕", style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.height(6.dp))
+            Text("No pudimos cargar los datos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.material3.FilledTonalButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text("Reintentar")
+            }
+        }
+    }
+}

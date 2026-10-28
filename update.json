@@ -1,6 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.3.0",
-  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.3.0/SpreadVE.apk",
-  "releaseNotes": "Herramientas rediseñadas y más claras; USDT de Binance siempre disponible en el selector; tarjetas y chips de resultado corregidos."
+  "versionCode": 7,
+  "versionName": "1.3.1",
+  "apkUrl": "https://github.com/codeonyx-dev/spread-ve/releases/download/v1.3.1/Codivisas.apk",
+  "releaseNotes": "Nuevo nombre Codivisas y logo; cuatro paletas (Zafiro, Ónix, Amatista, Esmeralda); modo sin conexión con la última tasa; widgets depurados; actualizaciones desde codeonyx.online.",
+  "sha256": "878675c2903380e3b6816ef3746ad4c5b8ff7903b21a17091f5e86e2d397a2f0"
 }

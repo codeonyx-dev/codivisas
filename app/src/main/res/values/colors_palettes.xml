@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fondos del ícono por paleta (generado por gen_paletas.py). -->
+<resources>
+    <color name="launcher_bg_azul">#1E3A8A</color>
+    <color name="launcher_bg_onix">#1A1A1A</color>
+    <color name="launcher_bg_morado">#4C1D95</color>
+    <color name="launcher_bg_esmeralda">#065F46</color>
+</resources>

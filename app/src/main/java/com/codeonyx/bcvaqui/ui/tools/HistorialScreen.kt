@@ -1,5 +1,7 @@
 package com.codeonyx.bcvaqui.ui.tools
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,9 +56,9 @@ import com.codeonyx.bcvaqui.ui.theme.SurfaceLight
 
 @Composable
 fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
-    val history by viewModel.history.collectAsState()
-    val loading by viewModel.historyLoading.collectAsState()
-    val error by viewModel.historyError.collectAsState()
+    val history by viewModel.history.collectAsStateWithLifecycle()
+    val loading by viewModel.historyLoading.collectAsStateWithLifecycle()
+    val error by viewModel.historyError.collectAsStateWithLifecycle()
 
     var days by remember { mutableIntStateOf(30) }
     var currency by remember { mutableStateOf("USD") }
@@ -93,16 +95,11 @@ fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
                         .height(220.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = BcvBlue)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             error != null && history.isEmpty() -> {
-                ToolPanel {
-                    Text(error ?: "", color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = { viewModel.loadHistory(days) }) {
-                        Text("Reintentar")
-                    }
-                }
+                ToolErrorState(error ?: "Revisa tu conexión.", onRetry = { viewModel.loadHistory(days) })
             }
             else -> {
                 val points = history.mapNotNull { entry ->
@@ -126,7 +123,7 @@ fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
                     val periodColor = when {
                         pct > 0.005 -> RateUp
                         pct < -0.005 -> RateDown
-                        else -> BcvBlue
+                        else -> MaterialTheme.colorScheme.primary
                     }
 
                     ToolResultCard(
@@ -142,7 +139,7 @@ fun HistorialScreen(viewModel: MainViewModel = appViewModel()) {
                             .fillMaxWidth()
                             .height(230.dp),
                         shape = RoundedCornerShape(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 2.dp
                     ) {
                         RateChart(
@@ -193,7 +190,7 @@ private fun HistoryDayRow(date: String, rate: Double, dayChangePct: Double?) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceLight)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

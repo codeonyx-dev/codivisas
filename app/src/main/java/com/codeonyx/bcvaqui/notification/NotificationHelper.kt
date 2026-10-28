@@ -30,11 +30,53 @@ object NotificationHelper {
         showNotification(context, RATE_NOTIFICATION_ID, title, body)
     }
 
+    private const val DEBT_NOTIFICATION_ID = 1002
+
+    /** Recordatorio de deudas próximas o vencidas (mismo canal de notificaciones). */
+    fun showDebtReminder(context: Context, title: String, body: String) {
+        runCatching { showNotification(context, DEBT_NOTIFICATION_ID, title, body) }
+    }
+
+    private const val GROUP_RATES = "spreadve_rates"
+    private const val SUMMARY_ID = 1000
+
+    /** Una notificación por fuente (id estable = reemplaza, no duplica) y un resumen agrupado. */
+    fun showRateNotifications(context: Context, items: List<com.codeonyx.bcvaqui.domain.RateNotification>) {
+        if (items.isEmpty()) return
+        runCatching {
+            items.forEach { n ->
+                showNotification(context, RATE_NOTIFICATION_ID + 10 + n.source.ordinal, n.title, n.body, GROUP_RATES)
+            }
+            if (items.size > 1) {
+                val inbox = NotificationCompat.InboxStyle().also { st -> items.forEach { st.addLine(it.title) } }
+                val summary = NotificationCompat.Builder(context, BcvAquiApp.CHANNEL_RATE_CHANGES)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle("Cambios de tasa")
+                    .setContentText(items.joinToString(" · ") { it.source.title })
+                    .setStyle(inbox)
+                    .setGroup(GROUP_RATES)
+                    .setGroupSummary(true)
+                    .setContentIntent(openApp(context, SUMMARY_ID))
+                    .setAutoCancel(true)
+                    .build()
+                NotificationManagerCompat.from(context).notify(SUMMARY_ID, summary)
+            }
+        }
+    }
+
+    private fun openApp(context: Context, requestCode: Int): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
     private fun showNotification(
         context: Context,
         notificationId: Int,
         title: String,
-        body: String
+        body: String,
+        group: String? = null
     ) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -53,6 +95,7 @@ object NotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .apply { group?.let { setGroup(it) } }
             .build()
 
         NotificationManagerCompat.from(context).notify(notificationId, notification)
